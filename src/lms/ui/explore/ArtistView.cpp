@@ -467,7 +467,7 @@ namespace lms::ui
         const auto tracks{ db::Track::find(LmsApp->getDbSession(), params) };
         for (const db::Track::pointer& track : tracks.results)
         {
-            _trackContainer->add(TrackListHelpers::createEntry(track, _playQueueController, _filters));
+            _trackContainer->add(TrackListHelpers::createEntry(track, _playQueueController, _filters, _artistId));
 
             areTracksAdded = true;
         }

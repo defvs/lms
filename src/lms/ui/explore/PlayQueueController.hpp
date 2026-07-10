@@ -52,6 +52,7 @@ namespace lms::ui
 
         void processCommand(Command command, db::MediumId medium);
         void processCommand(Command command, db::TrackListId trackList);
+        void playTrackInArtist(db::TrackId track, db::ArtistId artist);
         void playTrackInRelease(db::TrackId track);
 
         void setMaxTrackCountToEnqueue(std::size_t maxTrackCount) { _maxTrackCountToEnqueue = maxTrackCount; }
