@@ -398,7 +398,7 @@ namespace lms::ui
     void Artist::refreshTracks()
     {
         setCondition("if-has-tracks", true);
-        _trackContainer = bindNew<InfiniteScrollingContainer>("tracks");
+        _trackContainer = bindNew<InfiniteScrollingContainer>("tracks", Wt::WString::tr("Lms.Explore.Tracks.template.entry-container"));
         _trackContainer->onRequestElements.connect(this, [this] {
             addSomeTracks();
         });
