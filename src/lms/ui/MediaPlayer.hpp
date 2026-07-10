@@ -128,6 +128,7 @@ namespace lms::ui
         Wt::WAnchor* _release{};
         Wt::WText* _separator{};
         Wt::WContainerWidget* _artists{};
+        Wt::WContainerWidget* _rating{};
         Wt::WPushButton* _playQueue{};
     };
 } // namespace lms::ui

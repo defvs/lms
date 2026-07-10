@@ -250,6 +250,7 @@
 <message id="Lms.Explore.search">搜索</message>
 <message id="Lms.Explore.star">收藏</message>
 <message id="Lms.Explore.star-item">将 {1} 加入收藏</message>
+<message id="Lms.Explore.rate-item">为 {1} 评分：{2}/5</message>
 <message id="Lms.Explore.starred">已收藏</message>
 <message id="Lms.Explore.track-artist">曲目艺术家</message>
 <message id="Lms.Explore.track-info">曲目信息</message>

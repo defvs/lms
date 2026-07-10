@@ -49,6 +49,7 @@
 #include "Utils.hpp"
 #include "common/InfiniteScrollingContainer.hpp"
 #include "common/MandatoryValidator.hpp"
+#include "common/TrackRating.hpp"
 #include "common/ValueStringModel.hpp"
 #include "resource/DownloadResource.hpp"
 
@@ -518,6 +519,7 @@ namespace lms::ui
         }
 
         entry->bindString("duration", utils::durationToString(track->getDuration()), Wt::TextFormat::Plain);
+        entry->bindWidget("rating", createTrackRating(trackId, track->getName()));
 
         Wt::WPushButton* playBtn{ entry->bindNew<Wt::WPushButton>("play-btn", Wt::WString::tr("Lms.template.play-btn"), Wt::TextFormat::XHTML) };
         playBtn->setAttributeValue("aria-label", Wt::WString::tr("Lms.play-item").arg(track->getName()));

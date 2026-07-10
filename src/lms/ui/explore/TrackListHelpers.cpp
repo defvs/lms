@@ -45,6 +45,7 @@
 #include "ModalManager.hpp"
 #include "Utils.hpp"
 #include "common/Template.hpp"
+#include "common/TrackRating.hpp"
 #include "explore/Filters.hpp"
 #include "explore/PlayQueueController.hpp"
 #include "resource/ArtworkResource.hpp"
@@ -267,6 +268,7 @@ namespace lms::ui::TrackListHelpers
         }
 
         entry->bindString("duration", utils::durationToString(track->getDuration()), Wt::TextFormat::Plain);
+        entry->bindWidget("rating", createTrackRating(trackId, track->getName()));
 
         Wt::WPushButton* playBtn{ entry->bindNew<Wt::WPushButton>("play-btn", Wt::WString::tr("Lms.template.play-btn"), Wt::TextFormat::XHTML) };
         playBtn->setAttributeValue("aria-label", Wt::WString::tr("Lms.play-item").arg(track->getName()));

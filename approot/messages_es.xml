@@ -288,6 +288,7 @@
 <message id="Lms.Explore.search">Buscar</message>
 <message id="Lms.Explore.star">Añadir a favoritos</message>
 <message id="Lms.Explore.star-item">Agregar {1} a favoritos</message>
+<message id="Lms.Explore.rate-item">Calificar {1}: {2} de 5</message>
 <message id="Lms.Explore.starred">Favoritos</message>
 <message id="Lms.Explore.track-artist">
 	<plural case="0">Artista de la pista</plural>

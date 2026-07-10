@@ -26,6 +26,7 @@
 #include <Wt/WApplication.h>
 
 #include "database/Object.hpp"
+#include "database/objects/TrackId.hpp"
 #include "database/objects/Types.hpp"
 #include "database/objects/UserId.hpp"
 #include "services/scanner/ScannerEvents.hpp"
@@ -92,6 +93,9 @@ namespace lms::ui
         // Signal emitted just before the session ends (user may already be logged out)
         Wt::Signal<>& preQuit() { return _preQuit; }
 
+        // Signal emitted when a track rating changes in this session
+        Wt::Signal<db::TrackId, std::optional<db::Rating>>& trackRatingChanged() { return _trackRatingChanged; }
+
     private:
         void init();
         void processPasswordAuth();
@@ -110,6 +114,7 @@ namespace lms::ui
 
         db::IDb& _db;
         Wt::Signal<> _preQuit;
+        Wt::Signal<db::TrackId, std::optional<db::Rating>> _trackRatingChanged;
         LmsApplicationManager& _appManager;
         const AuthenticationBackend _authBackend;
         const bool _areDownloadsEnabled;
