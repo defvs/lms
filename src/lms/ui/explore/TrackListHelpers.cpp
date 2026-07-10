@@ -226,7 +226,7 @@ namespace lms::ui::TrackListHelpers
         LmsApp->getModalManager().show(std::move(trackLyrics));
     }
 
-    std::unique_ptr<Wt::WWidget> createEntry(const db::ObjectPtr<db::Track>& track, PlayQueueController& playQueueController, Filters& filters, std::optional<db::ArtistId> artistId)
+    std::unique_ptr<Wt::WWidget> createEntry(const db::ObjectPtr<db::Track>& track, PlayQueueController& playQueueController, Filters& filters, PlayTrackHandler playTrackHandler)
     {
         auto entry{ std::make_unique<Template>(Wt::WString::tr("Lms.Explore.Tracks.template.entry")) };
         auto* entryPtr{ entry.get() };
@@ -272,9 +272,9 @@ namespace lms::ui::TrackListHelpers
 
         Wt::WPushButton* playBtn{ entry->bindNew<Wt::WPushButton>("play-btn", Wt::WString::tr("Lms.template.play-btn"), Wt::TextFormat::XHTML) };
         playBtn->setAttributeValue("aria-label", Wt::WString::tr("Lms.play-item").arg(track->getName()));
-        auto playTrack{ [trackId, artistId, &playQueueController] {
-            if (artistId)
-                playQueueController.playTrackInArtist(trackId, *artistId);
+        auto playTrack{ [trackId, playTrackHandler = std::move(playTrackHandler), &playQueueController] {
+            if (playTrackHandler)
+                playTrackHandler(trackId);
             else
                 playQueueController.processCommand(PlayQueueController::Command::Play, { trackId });
         } };

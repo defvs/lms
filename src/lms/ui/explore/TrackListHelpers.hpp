@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -47,7 +48,9 @@ namespace lms::ui
 
 namespace lms::ui::TrackListHelpers
 {
+    using PlayTrackHandler = std::function<void(db::TrackId)>;
+
     void showTrackInfoModal(db::TrackId trackId, Filters& filters);
     void showTrackLyricsModal(db::TrackId trackId);
-    std::unique_ptr<Wt::WWidget> createEntry(const db::ObjectPtr<db::Track>& track, PlayQueueController& playQueueController, Filters& filters, std::optional<db::ArtistId> artistId = std::nullopt);
+    std::unique_ptr<Wt::WWidget> createEntry(const db::ObjectPtr<db::Track>& track, PlayQueueController& playQueueController, Filters& filters, PlayTrackHandler playTrackHandler = {});
 } // namespace lms::ui::TrackListHelpers
