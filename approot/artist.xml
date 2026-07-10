@@ -39,7 +39,7 @@
 	${</if-has-related-artists>}
 	${<if-has-tracks>}
 	<h3>${tr:Lms.Explore.tracks}</h3>
-	${tracks class="mb-3"}
+	${tracks class="mb-3 Lms-row-container"}
 	${</if-has-tracks>}
 </message>
 
