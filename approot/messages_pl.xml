@@ -317,6 +317,7 @@
 <message id="Lms.Explore.search">Szukaj</message>
 <message id="Lms.Explore.star">Wyróżnij</message>
 <message id="Lms.Explore.star-item">Dodaj {1} do ulubionych</message>
+<message id="Lms.Explore.rate-item">Oceń {1}: {2} z 5</message>
 <message id="Lms.Explore.starred">Wyróżnione</message>
 <message id="Lms.Explore.track-artist">
 	<plural case="0">Artysta utworu</plural>

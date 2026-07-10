@@ -288,6 +288,7 @@
 <message id="Lms.Explore.search">Search</message>
 <message id="Lms.Explore.star">Star</message>
 <message id="Lms.Explore.star-item">Star {1}</message>
+<message id="Lms.Explore.rate-item">Rate {1}: {2} out of 5</message>
 <message id="Lms.Explore.starred">Starred</message>
 <message id="Lms.Explore.track-artist">
 	<plural case="0">Track artist</plural>

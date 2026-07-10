@@ -55,6 +55,7 @@
 #include "ModalManager.hpp"
 #include "Utils.hpp"
 #include "common/Template.hpp"
+#include "common/TrackRating.hpp"
 #include "explore/Filters.hpp"
 #include "explore/PlayQueueController.hpp"
 #include "explore/ReleaseHelpers.hpp"
@@ -550,6 +551,7 @@ namespace lms::ui
             }
 
             entry->bindString("duration", utils::durationToString(track->getDuration()), Wt::TextFormat::Plain);
+            entry->bindWidget("rating", createTrackRating(trackId, track->getName()));
 
             LmsApp->getMediaPlayer().trackLoaded.connect(entry, [=](db::TrackId loadedTrackId) {
                 entry->toggleStyleClass("Lms-entry-playing", loadedTrackId == trackId);

@@ -71,6 +71,7 @@
 				</ul>
 			</div>
 		</div>
+		${rating class="d-flex flex-nowrap pe-2"}
 	</div>
 </message>
 
