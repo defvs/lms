@@ -62,14 +62,21 @@ namespace lms::ui
 
         refresh();
 
+        LmsApp->trackRatingChanged().connect(container.get(), [trackId, currentRating, refresh](db::TrackId changedTrackId, std::optional<db::Rating> rating) {
+            if (changedTrackId != trackId)
+                return;
+
+            *currentRating = rating;
+            refresh();
+        });
+
         for (std::size_t index{}; index < ratingCount; ++index)
         {
             const db::Rating rating{ static_cast<db::Rating>(index + 1) };
             (*buttons)[index]->clicked().connect([trackId, rating, currentRating, refresh] {
                 const std::optional<db::Rating> newRating{ *currentRating == rating ? std::nullopt : std::optional{ rating } };
                 core::Service<feedback::IFeedbackService>::get()->setRating(LmsApp->getUserId(), trackId, newRating);
-                *currentRating = newRating;
-                refresh();
+                LmsApp->trackRatingChanged().emit(trackId, newRating);
             });
         }
 
