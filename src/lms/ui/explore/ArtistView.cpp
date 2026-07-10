@@ -45,11 +45,13 @@
 #include "services/recommendation/IRecommendationService.hpp"
 
 #include "ArtistListHelpers.hpp"
+#include "DropDownMenuSelector.hpp"
 #include "Filters.hpp"
 #include "LmsApplication.hpp"
 #include "LmsApplicationException.hpp"
 #include "PlayQueueController.hpp"
 #include "ReleaseHelpers.hpp"
+#include "State.hpp"
 #include "TrackArtistTypeSelector.hpp"
 #include "TrackListHelpers.hpp"
 #include "Utils.hpp"
@@ -397,14 +399,53 @@ namespace lms::ui
 
     void Artist::refreshTracks()
     {
+        _trackSortMode = state::readValue<TrackSortMode>("artist_tracks_sort_mode").value_or(_defaultTrackSortMode);
+
         setCondition("if-has-tracks", true);
         _trackContainer = bindNew<InfiniteScrollingContainer>("tracks", Wt::WString::tr("Lms.Explore.Tracks.template.entry-container"));
         _trackContainer->onRequestElements.connect(this, [this] {
             addSomeTracks();
         });
 
+        using TrackSortModeSelector = DropDownMenuSelector<TrackSortMode>;
+        TrackSortModeSelector* sortModeSelector{ bindNew<TrackSortModeSelector>("track-sort-mode", Wt::WString::tr("Lms.Explore.Artist.template.track-sort-mode"), _trackSortMode) };
+        sortModeSelector->bindItem("date", Wt::WString::tr("Lms.Explore.date"), TrackSortMode::Date);
+        sortModeSelector->bindItem("rating", Wt::WString::tr("Lms.Explore.rating"), TrackSortMode::Rating);
+        sortModeSelector->bindItem("random", Wt::WString::tr("Lms.Explore.random"), TrackSortMode::Random);
+        sortModeSelector->itemSelected.connect([this](TrackSortMode sortMode) {
+            _trackSortMode = sortMode;
+            state::writeValue<TrackSortMode>("artist_tracks_sort_mode", sortMode);
+            refreshTrackIds();
+            _trackContainer->reset();
+            addSomeTracks();
+        });
+
+        refreshTrackIds();
         const bool added{ addSomeTracks() };
         setCondition("if-has-tracks", added);
+    }
+
+    void Artist::refreshTrackIds()
+    {
+        db::Track::FindParameters params;
+        params.setArtist(_artistId);
+
+        switch (_trackSortMode)
+        {
+        case TrackSortMode::Date:
+            params.setSortMethod(db::TrackSortMethod::DateDesc);
+            break;
+        case TrackSortMode::Rating:
+            params.setSortMethod(db::TrackSortMethod::RatingDescAndPlayCountDesc);
+            params.setSortUser(LmsApp->getUserId());
+            break;
+        case TrackSortMode::Random:
+            params.setSortMethod(db::TrackSortMethod::Random);
+            break;
+        }
+
+        auto transaction{ LmsApp->getDbSession().createReadTransaction() };
+        _trackIds = db::Track::findIds(LmsApp->getDbSession(), params).results;
     }
 
     void Artist::refreshRelatedArtists(const std::vector<db::ArtistId>& similarArtistsId)
@@ -454,25 +495,22 @@ namespace lms::ui
     bool Artist::addSomeTracks()
     {
         bool areTracksAdded{};
-
-        const db::Range range{ static_cast<std::size_t>(_trackContainer->getCount()), _tracksBatchSize };
-
-        db::Track::FindParameters params;
-        params.setArtist(_artistId);
-        params.setRange(range);
-        params.setSortMethod(db::TrackSortMethod::Name);
+        const std::size_t begin{ static_cast<std::size_t>(_trackContainer->getCount()) };
+        const std::size_t end{ std::min(begin + _tracksBatchSize, _trackIds.size()) };
 
         auto transaction{ LmsApp->getDbSession().createReadTransaction() };
 
-        const auto tracks{ db::Track::find(LmsApp->getDbSession(), params) };
-        for (const db::Track::pointer& track : tracks.results)
+        for (std::size_t index{ begin }; index < end; ++index)
         {
-            _trackContainer->add(TrackListHelpers::createEntry(track, _playQueueController, _filters, _artistId));
+            if (const db::Track::pointer track{ db::Track::find(LmsApp->getDbSession(), _trackIds[index]) })
+            {
+                _trackContainer->add(TrackListHelpers::createEntry(track, _playQueueController, _filters, _artistId));
 
-            areTracksAdded = true;
+                areTracksAdded = true;
+            }
         }
 
-        _trackContainer->setHasMore(tracks.moreResults);
+        _trackContainer->setHasMore(end < _trackIds.size());
 
         return areTracksAdded;
     }

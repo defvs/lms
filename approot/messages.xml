@@ -271,6 +271,8 @@
 	<plural case="1">Producers</plural>
 </message>
 <message id="Lms.Explore.random">Random</message>
+<message id="Lms.Explore.date">Date</message>
+<message id="Lms.Explore.rating">Rating</message>
 <message id="Lms.Explore.recently-added">Recently added</message>
 <message id="Lms.Explore.recently-modified">Recently modified</message>
 <message id="Lms.Explore.recently-played">Recently played</message>

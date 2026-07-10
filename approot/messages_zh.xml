@@ -239,6 +239,8 @@
 <message id="Lms.Explore.playcount">播放次数</message>
 <message id="Lms.Explore.producer">制作人</message>
 <message id="Lms.Explore.random">随机</message>
+<message id="Lms.Explore.date">日期</message>
+<message id="Lms.Explore.rating">评分</message>
 <message id="Lms.Explore.recently-added">最近添加</message>
 <message id="Lms.Explore.recently-modified">最近更改</message>
 <message id="Lms.Explore.recently-played">最近播放</message>

@@ -180,6 +180,8 @@ namespace lms::db
         Release,   // order by disc/track number
         TrackList, // order by asc order in tracklist
         TrackNumber,
+        DateDesc,
+        RatingDescAndPlayCountDesc,
     };
 
     enum class TrackLyricsSortMethod

@@ -28,6 +28,7 @@
 #include "database/objects/ArtistId.hpp"
 #include "database/objects/ArtworkId.hpp"
 #include "database/objects/ReleaseId.hpp"
+#include "database/objects/TrackId.hpp"
 
 #include "ReleaseHelpers.hpp"
 #include "ReleaseTypes.hpp"
@@ -58,6 +59,7 @@ namespace lms::ui
         void refreshReleases();
         void refreshAppearsOnReleases();
         void refreshTracks();
+        void refreshTrackIds();
         void refreshRelatedArtists(const std::vector<db::ArtistId>& similarArtistsId);
         void refreshLinks(const db::ObjectPtr<db::Artist>& artist);
 
@@ -66,6 +68,14 @@ namespace lms::ui
         bool addSomeTracks();
         static constexpr std::size_t _releasesBatchSize{ 6 };
         static constexpr std::size_t _tracksBatchSize{ 6 };
+
+        enum class TrackSortMode
+        {
+            Date,
+            Rating,
+            Random,
+        };
+        static constexpr TrackSortMode _defaultTrackSortMode{ TrackSortMode::Date };
 
         Filters& _filters;
         PlayQueueController& _playQueueController;
@@ -80,6 +90,8 @@ namespace lms::ui
         std::map<std::optional<db::TrackArtistLinkType>, std::vector<db::ReleaseId>> _appearsOnReleases;
         ReleaseContainer _appearsOnReleaseContainer;
         InfiniteScrollingContainer* _trackContainer{};
+        std::vector<db::TrackId> _trackIds;
+        TrackSortMode _trackSortMode{ _defaultTrackSortMode };
         db::ArtistId _artistId{};
         std::string _artistName;
     };

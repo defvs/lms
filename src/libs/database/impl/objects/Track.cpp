@@ -288,6 +288,16 @@ namespace lms::db
             case TrackSortMethod::TrackNumber:
                 query.orderBy("t.track_number");
                 break;
+            case TrackSortMethod::DateDesc:
+                query.orderBy("t.date DESC,t.release_id,(SELECT m.position FROM medium m WHERE m.id = t.medium_id),t.track_number,t.name COLLATE NOCASE,t.id");
+                break;
+            case TrackSortMethod::RatingDescAndPlayCountDesc:
+                assert(params.sortUser.isValid());
+                query.orderBy("COALESCE((SELECT r_t.rating FROM rated_track r_t WHERE r_t.track_id = t.id AND r_t.user_id = ?), 0) DESC,"
+                              "(SELECT COUNT(*) FROM listen l WHERE l.track_id = t.id AND l.user_id = ? AND l.backend = (SELECT u.scrobbling_backend FROM user u WHERE u.id = ?)) DESC,"
+                              "t.date DESC,t.name COLLATE NOCASE,t.id");
+                query.bind(params.sortUser).bind(params.sortUser).bind(params.sortUser);
+                break;
             }
             return query;
         }
