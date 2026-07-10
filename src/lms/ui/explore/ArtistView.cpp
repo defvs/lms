@@ -504,7 +504,9 @@ namespace lms::ui
         {
             if (const db::Track::pointer track{ db::Track::find(LmsApp->getDbSession(), _trackIds[index]) })
             {
-                _trackContainer->add(TrackListHelpers::createEntry(track, _playQueueController, _filters, _artistId));
+                _trackContainer->add(TrackListHelpers::createEntry(track, _playQueueController, _filters, [this](db::TrackId trackId) {
+                    _playQueueController.playTrackInList(trackId, _trackIds);
+                }));
 
                 areTracksAdded = true;
             }
