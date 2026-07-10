@@ -226,7 +226,7 @@ namespace lms::ui::TrackListHelpers
         LmsApp->getModalManager().show(std::move(trackLyrics));
     }
 
-    std::unique_ptr<Wt::WWidget> createEntry(const db::ObjectPtr<db::Track>& track, PlayQueueController& playQueueController, Filters& filters)
+    std::unique_ptr<Wt::WWidget> createEntry(const db::ObjectPtr<db::Track>& track, PlayQueueController& playQueueController, Filters& filters, std::optional<db::ArtistId> artistId)
     {
         auto entry{ std::make_unique<Template>(Wt::WString::tr("Lms.Explore.Tracks.template.entry")) };
         auto* entryPtr{ entry.get() };
@@ -272,18 +272,20 @@ namespace lms::ui::TrackListHelpers
 
         Wt::WPushButton* playBtn{ entry->bindNew<Wt::WPushButton>("play-btn", Wt::WString::tr("Lms.template.play-btn"), Wt::TextFormat::XHTML) };
         playBtn->setAttributeValue("aria-label", Wt::WString::tr("Lms.play-item").arg(track->getName()));
-        playBtn->clicked().connect([trackId, &playQueueController] {
-            playQueueController.processCommand(PlayQueueController::Command::Play, { trackId });
-        });
+        auto playTrack{ [trackId, artistId, &playQueueController] {
+            if (artistId)
+                playQueueController.playTrackInArtist(trackId, *artistId);
+            else
+                playQueueController.processCommand(PlayQueueController::Command::Play, { trackId });
+        } };
+        playBtn->clicked().connect(playTrack);
 
         entry->bindNew<Wt::WPushButton>("more-btn", Wt::WString::tr("Lms.template.more-btn"), Wt::TextFormat::XHTML)
             ->setAttributeValue("aria-label", Wt::WString::tr("Lms.more"));
 
         entry->bindNew<Wt::WPushButton>("play", Wt::WString::tr("Lms.Explore.play"))
             ->clicked()
-            .connect([trackId, &playQueueController] {
-                playQueueController.processCommand(PlayQueueController::Command::Play, { trackId });
-            });
+            .connect(playTrack);
         entry->bindNew<Wt::WPushButton>("play-next", Wt::WString::tr("Lms.Explore.play-next"))
             ->clicked()
             .connect([=, &playQueueController] {

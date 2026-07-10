@@ -172,6 +172,28 @@ namespace lms::ui
         processCommand(command, tracks);
     }
 
+    void PlayQueueController::playTrackInArtist(db::TrackId trackId, db::ArtistId artistId)
+    {
+        db::Track::FindParameters params;
+        params.setArtist(artistId);
+        params.setSortMethod(db::TrackSortMethod::Name);
+        params.setFilters(_filters.getDbFilters());
+        params.setRange(db::Range{ 0, _maxTrackCountToEnqueue });
+
+        std::vector<db::TrackId> tracks;
+        {
+            auto transaction{ LmsApp->getDbSession().createReadTransaction() };
+            tracks = db::Track::findIds(LmsApp->getDbSession(), params).results;
+        }
+
+        const auto itTrack{ std::find(std::cbegin(tracks), std::cend(tracks), trackId) };
+        if (itTrack == std::cend(tracks))
+            return;
+
+        const std::size_t index{ static_cast<std::size_t>(std::distance(std::cbegin(tracks), itTrack)) };
+        _playQueue.playAtIndex(tracks, index);
+    }
+
     void PlayQueueController::playTrackInRelease(db::TrackId trackId)
     {
         db::ReleaseId releaseId;

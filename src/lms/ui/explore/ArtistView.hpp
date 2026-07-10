@@ -57,16 +57,15 @@ namespace lms::ui
         void refreshArtistInfo();
         void refreshReleases();
         void refreshAppearsOnReleases();
-        void refreshNonReleaseTracks();
+        void refreshTracks();
         void refreshRelatedArtists(const std::vector<db::ArtistId>& similarArtistsId);
         void refreshLinks(const db::ObjectPtr<db::Artist>& artist);
 
         struct ReleaseContainer;
         void addSomeReleases(ReleaseContainer& releaseContainer, core::EnumSet<releaseListHelpers::DisplayOptions> displayOptions);
-        bool addSomeNonReleaseTracks();
+        bool addSomeTracks();
         static constexpr std::size_t _releasesBatchSize{ 6 };
         static constexpr std::size_t _tracksBatchSize{ 6 };
-        static constexpr std::size_t _tracksMaxCount{ 160 };
 
         Filters& _filters;
         PlayQueueController& _playQueueController;

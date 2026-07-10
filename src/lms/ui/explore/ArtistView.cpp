@@ -136,9 +136,9 @@ namespace lms::ui
         refreshArtistInfo();
         refreshReleases();
         refreshAppearsOnReleases();
-        refreshNonReleaseTracks();
         refreshLinks(artist);
         refreshRelatedArtists(similarArtistIds);
+        refreshTracks();
 
         Wt::WContainerWidget* clusterContainers{ bindNew<Wt::WContainerWidget>("clusters") };
 
@@ -395,16 +395,16 @@ namespace lms::ui
             bindEmpty("appears-on-releases");
     }
 
-    void Artist::refreshNonReleaseTracks()
+    void Artist::refreshTracks()
     {
-        setCondition("if-has-non-release-tracks", true);
-        _trackContainer = bindNew<InfiniteScrollingContainer>("tracks");
+        setCondition("if-has-tracks", true);
+        _trackContainer = bindNew<InfiniteScrollingContainer>("tracks", Wt::WString::tr("Lms.Explore.Tracks.template.entry-container"));
         _trackContainer->onRequestElements.connect(this, [this] {
-            addSomeNonReleaseTracks();
+            addSomeTracks();
         });
 
-        const bool added{ addSomeNonReleaseTracks() };
-        setCondition("if-has-non-release-tracks", added);
+        const bool added{ addSomeTracks() };
+        setCondition("if-has-tracks", added);
     }
 
     void Artist::refreshRelatedArtists(const std::vector<db::ArtistId>& similarArtistsId)
@@ -451,7 +451,7 @@ namespace lms::ui
         releaseContainer.container->setHasMore(false);
     }
 
-    bool Artist::addSomeNonReleaseTracks()
+    bool Artist::addSomeTracks()
     {
         bool areTracksAdded{};
 
@@ -461,18 +461,13 @@ namespace lms::ui
         params.setArtist(_artistId);
         params.setRange(range);
         params.setSortMethod(db::TrackSortMethod::Name);
-        params.setNonRelease(true);
 
         auto transaction{ LmsApp->getDbSession().createReadTransaction() };
 
         const auto tracks{ db::Track::find(LmsApp->getDbSession(), params) };
         for (const db::Track::pointer& track : tracks.results)
         {
-            // TODO handle this with range
-            if (_trackContainer->getCount() == _tracksMaxCount)
-                break;
-
-            _trackContainer->add(TrackListHelpers::createEntry(track, _playQueueController, _filters));
+            _trackContainer->add(TrackListHelpers::createEntry(track, _playQueueController, _filters, _artistId));
 
             areTracksAdded = true;
         }
