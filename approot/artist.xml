@@ -38,9 +38,25 @@
 	${related-artists class="row row-cols-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-6 gx-2 gy-4 mb-3"}
 	${</if-has-related-artists>}
 	${<if-has-tracks>}
-	<h3>${tr:Lms.Explore.tracks}</h3>
+	<div class="d-flex align-items-center justify-content-between mb-2">
+		<h3 class="mb-0">${tr:Lms.Explore.tracks}</h3>
+		${track-sort-mode}
+	</div>
 	${tracks class="mb-3"}
 	${</if-has-tracks>}
+</message>
+
+<message id="Lms.Explore.Artist.template.track-sort-mode">
+	<div class="dropdown">
+		<button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+			${selected-item}
+		</button>
+		<ul class="dropdown-menu dropdown-menu-end">
+			<li>${date class="dropdown-item"}</li>
+			<li>${rating class="dropdown-item"}</li>
+			<li>${random class="dropdown-item"}</li>
+		</ul>
+	</div>
 </message>
 
 <message id="Lms.Explore.Artist.template.release-container">

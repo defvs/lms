@@ -23,6 +23,7 @@
 
 #include "database/objects/Artwork.hpp"
 #include "database/objects/Image.hpp"
+#include "database/objects/RatedTrack.hpp"
 
 namespace lms::db::tests
 {
@@ -31,7 +32,9 @@ namespace lms::db::tests
     using ScopedGrouping = ScopedEntity<db::Grouping>;
     using ScopedImage = ScopedEntity<db::Image>;
     using ScopedLanguage = ScopedEntity<db::Language>;
+    using ScopedListen = ScopedEntity<db::Listen>;
     using ScopedMood = ScopedEntity<db::Mood>;
+    using ScopedRatedTrack = ScopedEntity<db::RatedTrack>;
 
     TEST_F(DatabaseFixture, Track)
     {
@@ -417,6 +420,71 @@ namespace lms::db::tests
             auto transaction{ session.createReadTransaction() };
             EXPECT_EQ(track->getYear(), date.getYear());
             EXPECT_EQ(track->getOriginalYear(), originalDate.getYear());
+        }
+    }
+
+    TEST_F(DatabaseFixture, Track_sortDateDesc)
+    {
+        ScopedTrack olderTrack{ session };
+        ScopedTrack newerTrack{ session };
+        ScopedTrack undatedTrack{ session };
+
+        {
+            auto transaction{ session.createWriteTransaction() };
+            olderTrack.get().modify()->setDate(core::PartialDateTime{ 2020, 1, 1 });
+            newerTrack.get().modify()->setDate(core::PartialDateTime{ 2024, 1, 1 });
+        }
+
+        {
+            auto transaction{ session.createReadTransaction() };
+            const auto tracks{ Track::findIds(session, Track::FindParameters{}.setSortMethod(TrackSortMethod::DateDesc)) };
+
+            ASSERT_EQ(tracks.results.size(), 3);
+            EXPECT_EQ(tracks.results[0], newerTrack.getId());
+            EXPECT_EQ(tracks.results[1], olderTrack.getId());
+            EXPECT_EQ(tracks.results[2], undatedTrack.getId());
+        }
+    }
+
+    TEST_F(DatabaseFixture, Track_sortRatingThenPlayCount)
+    {
+        ScopedTrack fiveStarTrack{ session };
+        ScopedTrack popularFourStarTrack{ session };
+        ScopedTrack fourStarTrack{ session };
+        ScopedTrack unratedTrack{ session };
+        ScopedUser user{ session, "MyUser" };
+
+        ScopedRatedTrack fiveStarRating{ session, fiveStarTrack.lockAndGet(), user.lockAndGet() };
+        ScopedRatedTrack popularFourStarRating{ session, popularFourStarTrack.lockAndGet(), user.lockAndGet() };
+        ScopedRatedTrack fourStarRating{ session, fourStarTrack.lockAndGet(), user.lockAndGet() };
+
+        {
+            auto transaction{ session.createWriteTransaction() };
+            fiveStarRating.get().modify()->setRating(5);
+            popularFourStarRating.get().modify()->setRating(4);
+            fourStarRating.get().modify()->setRating(4);
+            user.get().modify()->setScrobblingBackend(ScrobblingBackend::Internal);
+        }
+
+        const Wt::WDateTime listenTime{ Wt::WDate{ 2025, 1, 1 }, Wt::WTime{ 12, 0, 0 } };
+        ScopedListen popularFourStarListen1{ session, user.lockAndGet(), popularFourStarTrack.lockAndGet(), ScrobblingBackend::Internal, listenTime };
+        ScopedListen popularFourStarListen2{ session, user.lockAndGet(), popularFourStarTrack.lockAndGet(), ScrobblingBackend::Internal, listenTime };
+        ScopedListen fourStarListen{ session, user.lockAndGet(), fourStarTrack.lockAndGet(), ScrobblingBackend::Internal, listenTime };
+        ScopedListen unratedListen1{ session, user.lockAndGet(), unratedTrack.lockAndGet(), ScrobblingBackend::Internal, listenTime };
+        ScopedListen unratedListen2{ session, user.lockAndGet(), unratedTrack.lockAndGet(), ScrobblingBackend::Internal, listenTime };
+        ScopedListen unratedListen3{ session, user.lockAndGet(), unratedTrack.lockAndGet(), ScrobblingBackend::Internal, listenTime };
+
+        {
+            auto transaction{ session.createReadTransaction() };
+            const auto tracks{ Track::findIds(session, Track::FindParameters{}
+                                                           .setSortMethod(TrackSortMethod::RatingDescAndPlayCountDesc)
+                                                           .setSortUser(user.getId())) };
+
+            ASSERT_EQ(tracks.results.size(), 4);
+            EXPECT_EQ(tracks.results[0], fiveStarTrack.getId());
+            EXPECT_EQ(tracks.results[1], popularFourStarTrack.getId());
+            EXPECT_EQ(tracks.results[2], fourStarTrack.getId());
+            EXPECT_EQ(tracks.results[3], unratedTrack.getId());
         }
     }
 

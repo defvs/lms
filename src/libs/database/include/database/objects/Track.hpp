@@ -92,6 +92,7 @@ namespace lms::db
             std::optional<Range> range;
             Wt::WDateTime writtenAfter;
             UserId starringUser;                                     // only tracks starred by this user
+            UserId sortUser;                                         // user whose feedback/listens are used for sorting
             std::optional<FeedbackBackend> feedbackBackend;          // and for this feedback backend
             ArtistId artist;                                         // only tracks that involve this artist
             std::string artistName;                                  // only tracks that involve this artist name
@@ -126,6 +127,11 @@ namespace lms::db
             FindParameters& setSortMethod(TrackSortMethod _method)
             {
                 sortMethod = _method;
+                return *this;
+            }
+            FindParameters& setSortUser(UserId _user)
+            {
+                sortUser = _user;
                 return *this;
             }
             FindParameters& setRange(std::optional<Range> _range)

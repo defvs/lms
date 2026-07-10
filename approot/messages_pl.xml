@@ -298,6 +298,8 @@
 	<plural case="2">Producentów</plural>
 </message>
 <message id="Lms.Explore.random">Losowo</message>
+<message id="Lms.Explore.date">Data</message>
+<message id="Lms.Explore.rating">Ocena</message>
 <message id="Lms.Explore.recently-added">Ostatnio dodane</message>
 <message id="Lms.Explore.recently-modified">Ostatnio zmienione</message>
 <message id="Lms.Explore.recently-played">Ostatnio odtwarzane</message>
