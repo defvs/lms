@@ -40,6 +40,7 @@
 
 #include "LmsApplication.hpp"
 #include "Utils.hpp"
+#include "common/TrackRating.hpp"
 #include "resource/ArtworkResource.hpp"
 #include "resource/AudioFileResource.hpp"
 #include "resource/AudioTranscodingResource.hpp"
@@ -198,6 +199,7 @@ namespace lms::ui
         _artists = bindNew<Wt::WContainerWidget>("artist");
         _release = bindNew<Wt::WAnchor>("release");
         _separator = bindNew<Wt::WText>("separator");
+        bindEmpty("rating");
         _playQueue = bindNew<Wt::WPushButton>("playqueue-btn", Wt::WString::tr("Lms.MediaPlayer.template.playqueue-btn").arg(0), Wt::TextFormat::XHTML);
         _playQueue->setLink(Wt::WLink{ Wt::LinkType::InternalPath, "/playqueue" });
         _playQueue->setToolTip(tr("Lms.PlayQueue.playqueue"));
@@ -283,6 +285,7 @@ namespace lms::ui
 
             _title->setTextFormat(Wt::TextFormat::Plain);
             _title->setText(Wt::WString::fromUTF8(track->getName()));
+            bindWidget("rating", createTrackRating(trackId, track->getName()));
 
             _artists->clear();
             _artists->addWidget(utils::createArtistsAnchors(artistDisplayInfo));

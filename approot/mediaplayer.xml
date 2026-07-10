@@ -14,7 +14,7 @@
 		</div>
 
 		<div class="d-flex align-items-center">
-			<div class="py-2 pe-2 d-inline-flex">
+			<div class="py-2 pe-2 d-inline-flex align-items-center">
 				<button id="lms-mp-previous" class="btn btn-sm btn-outline-primary border-0" aria-label="${tr:Lms.Player.previous}">
 					<i class="fa fa-fw fa-step-backward"/>
 				</button>
@@ -24,6 +24,7 @@
 				<button id="lms-mp-next" class="btn btn-sm btn-outline-primary border-0" aria-label="${tr:Lms.Player.next}">
 					<i class="fa fa-fw fa-step-forward"/>
 				</button>
+				${rating class="d-flex flex-nowrap align-items-center ms-2"}
 			</div>
 			<div class="flex-fill text-center text-truncate">
 				${title class="d-block text-truncate"}
