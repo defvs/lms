@@ -256,6 +256,7 @@ namespace lms::ui::utils
     std::unique_ptr<Wt::WContainerWidget> createArtistAnchorList(const std::vector<db::Artist::pointer>& artists, std::string_view cssAnchorClass)
     {
         std::unique_ptr<Wt::WContainerWidget> artistContainer{ std::make_unique<Wt::WContainerWidget>() };
+        artistContainer->setInline(true);
 
         bool firstArtist{ true };
 
