@@ -582,6 +582,23 @@ namespace lms::scanner::tests
         EXPECT_EQ(track.artistDisplayName, "Artist1, Artist2"); // reconstruct artist display name since multiple entries are found and nothing is set in artist
     }
 
+    TEST(TrackMetadataParser, artistDisplayNameMayOmitStructuredArtists)
+    {
+        const TestTagReader testTags{
+            {
+                { audio::TagType::Artist, { "Original Artist" } },
+                { audio::TagType::Artists, { "Original Artist", "Remixer" } },
+            }
+        };
+
+        const Track track{ TrackMetadataParser{}.parseTrackMetaData(testTags) };
+
+        ASSERT_EQ(track.artists.size(), 2);
+        EXPECT_EQ(track.artists[0].name, "Original Artist");
+        EXPECT_EQ(track.artists[1].name, "Remixer");
+        EXPECT_EQ(track.artistDisplayName, "Original Artist");
+    }
+
     TEST(TrackMetadataParser, multipleArtistsInArtistsWithEndDelimiter)
     {
         const TestTagReader testTags{
