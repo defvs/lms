@@ -41,6 +41,7 @@
 #include "database/objects/MediaLibrary.hpp"
 #include "database/objects/Medium.hpp"
 #include "database/objects/Mood.hpp"
+#include "database/objects/Movement.hpp"
 #include "database/objects/Release.hpp"
 #include "database/objects/ReleaseArtistLink.hpp"
 #include "database/objects/Track.hpp"
@@ -49,6 +50,7 @@
 #include "database/objects/TrackEmbeddedImageLink.hpp"
 #include "database/objects/TrackLyrics.hpp"
 #include "database/objects/TrackMusicNNEmbeddings.hpp"
+#include "database/objects/Work.hpp"
 #include "image/Exception.hpp"
 #include "image/Image.hpp"
 
@@ -143,7 +145,8 @@ namespace lms::scanner
                 if (dbArtistLink->getArtistName() != artist.name)
                     return true;
 
-                if (dbArtistLink->getArtistSortName() != artist.sortName)
+                const std::string_view artistSortName{ artist.sortName ? std::string_view{ *artist.sortName } : std::string_view{} };
+                if (dbArtistLink->getArtistSortName() != artistSortName)
                     return true;
 
                 if (!dbArtistLink->isArtistMBIDMatched() && artist.mbid)
@@ -214,7 +217,6 @@ namespace lms::scanner
         {
             // TODO: add more criterias?
             return dbCandidateRelease->getName() == release.name
-                && dbCandidateRelease->getSortName() == release.sortName
                 && dbCandidateRelease->getTotalDisc() == release.mediumCount
                 && dbCandidateRelease->isCompilation() == release.isCompilation
                 && dbCandidateRelease->getLabelNames() == release.labels
@@ -368,6 +370,24 @@ namespace lms::scanner
             return moods;
         }
 
+        std::vector<db::Work::pointer> getOrCreateWorks(db::Session& session, db::ReleaseId releaseId, std::span<const Work> works)
+        {
+            std::vector<db::Work::pointer> dbWorks;
+            dbWorks.reserve(works.size());
+            for (const Work& work : works)
+            {
+                // Work titles are often generic and collide across unrelated works, so
+                // without an mbid we only ever match a work already used on the same release, not globally by name
+                db::Work::pointer dbWork{ work.mbid ? db::Work::find(session, *work.mbid) : (releaseId.isValid() ? db::Work::find(session, releaseId, work.name) : db::Work::pointer{}) };
+                if (!dbWork)
+                    dbWork = session.create<db::Work>(work.name, work.mbid);
+                else if (dbWork->getName() != work.name)
+                    dbWork.modify()->setName(work.name);
+                dbWorks.push_back(dbWork);
+            }
+            return dbWorks;
+        }
+
         std::vector<db::Cluster::pointer> getOrCreateClusters(db::Session& session, const Track& track)
         {
             std::vector<db::Cluster::pointer> clusters;
@@ -417,9 +437,9 @@ namespace lms::scanner
                 image = session.create<db::TrackEmbeddedImage>();
                 image.modify()->setSize(imageInfo.size);
                 image.modify()->setHash(db::ImageHashType{ imageInfo.hash });
-                image.modify()->setWidth(imageInfo.properties.width);
-                image.modify()->setHeight(imageInfo.properties.height);
-                image.modify()->setMimeType(imageInfo.mimeType);
+                image.modify()->setWidth(imageInfo.dimensions.width);
+                image.modify()->setHeight(imageInfo.dimensions.height);
+                image.modify()->setFormat(imageInfo.format);
 
                 session.create<db::Artwork>(image);
             }
@@ -602,7 +622,7 @@ namespace lms::scanner
             audioFileInfo->getImageReader()->visitImages([&](const audio::Image& image) {
                 try
                 {
-                    image::ImageProperties properties{ image::probeImage(image.data) };
+                    const image::ImageProperties probed{ image::probeImage(image.data) };
 
                     ImageInfo info;
                     info.index = index;
@@ -612,9 +632,9 @@ namespace lms::scanner
                         info.hash = core::XxHash3_64::hash(image.data);
                     }
                     info.size = image.data.size();
-                    info.mimeType = image.mimeType;
+                    info.format = probed.format;
                     info.description = image.description;
-                    info.properties = properties;
+                    info.dimensions = probed.dimensions.value_or(image::ImageDimensions{});
 
                     _file->images.push_back(std::move(info));
                 }
@@ -836,6 +856,12 @@ namespace lms::scanner
         track.modify()->setGroupings(getOrCreateGroupings(dbSession, _file->track.groupings));
         track.modify()->setLanguages(getOrCreateLanguages(dbSession, _file->track.languages));
         track.modify()->setMoods(getOrCreateMoods(dbSession, _file->track.moods));
+        track.modify()->setWorks(getOrCreateWorks(dbSession, track->getReleaseId(), _file->track.works));
+
+        track.modify()->clearMovements();
+        for (const auto& movement : _file->track.movements)
+            db::Movement::create(dbSession, movement.name, movement.number, movement.count, track);
+
         track.modify()->setName(title);
         track.modify()->setTrackNumber(_file->track.position);
         track.modify()->setDate(_file->track.date);

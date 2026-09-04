@@ -21,15 +21,19 @@
 
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <system_error>
 
 #include "core/ILogger.hpp"
 #include "core/http/IClient.hpp"
+
 #include "database/IDb.hpp"
 #include "database/Session.hpp"
 #include "database/objects/Artwork.hpp"
 #include "database/objects/Image.hpp"
 #include "database/objects/PodcastEpisode.hpp"
+#include "image/Exception.hpp"
+#include "image/Image.hpp"
 
 #include "Executor.hpp"
 #include "Utils.hpp"
@@ -38,7 +42,7 @@ namespace lms::podcast
 {
     namespace
     {
-        void createEpisodeArtwork(db::Session& session, db::PodcastEpisodeId episodeId, const std::filesystem::path& filePath, std::string_view contentType)
+        void createEpisodeArtwork(db::Session& session, db::PodcastEpisodeId episodeId, const std::filesystem::path& filePath, const image::ImageProperties& probedImage)
         {
             auto transaction{ session.createWriteTransaction() };
 
@@ -46,7 +50,7 @@ namespace lms::podcast
             if (!episode)
                 return;
 
-            if (db::Artwork::pointer artwork{ utils::createArtworkFromImage(session, filePath, contentType) })
+            if (db::Artwork::pointer artwork{ utils::createArtworkFromImage(session, filePath, probedImage) })
                 episode.modify()->setArtwork(artwork);
         }
     } // namespace
@@ -122,6 +126,20 @@ namespace lms::podcast
         };
         params.onSuccessFunc = [=, this](const Wt::Http::Message& msg) {
             getExecutor().post([=, this] {
+                const std::string body{ msg.body() }; // API enforces a copy here :(
+                const auto bodySpan{ std::as_bytes(std::span{ body.data(), body.size() }) };
+                std::optional<image::ImageProperties> probedImage;
+                try
+                {
+                    probedImage = image::probeImage(bodySpan);
+                }
+                catch (const image::Exception& e)
+                {
+                    LMS_LOG(PODCAST, WARNING, "Discarding non-image response for episode '" << episode->getTitle() << "' from '" << url << "': " << e.what());
+                    processNext();
+                    return;
+                }
+
                 std::ofstream file{ finalFilePath, std::ios::binary | std::ios::trunc };
                 if (!file)
                 {
@@ -131,8 +149,7 @@ namespace lms::podcast
                     return;
                 }
 
-                const std::string body{ msg.body() }; // API enforces a copy here
-                file.write(body.data(), body.size());
+                file.write(body.data(), static_cast<std::streamsize>(body.size()));
                 if (!file)
                 {
                     std::error_code ec{ errno, std::generic_category() };
@@ -142,8 +159,7 @@ namespace lms::podcast
                 }
 
                 LMS_LOG(PODCAST, INFO, "Downloaded episode artwork for episode '" << episode->getTitle() << "'");
-                const std::string* contentType{ msg.getHeader("Content-Type") };
-                createEpisodeArtwork(getDb().getTLSSession(), episodeId, finalFilePath, contentType ? *contentType : "application/octet-stream");
+                createEpisodeArtwork(getDb().getTLSSession(), episodeId, finalFilePath, *probedImage);
 
                 processNext();
             });

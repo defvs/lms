@@ -118,19 +118,19 @@ namespace lms::api::subsonic
         for (const DirectoryId id : params.directoryIds)
         {
             if (const ReleaseId releaseId{ getReleaseIdFromDirectory(context.getDbSession(), id) }; releaseId.isValid())
-                core::Service<feedback::IFeedbackService>::get()->star(context.getUser()->getId(), releaseId);
+                core::Service<feedback::IFeedbackService>::get()->setFeedback(context.getUser()->getId(), releaseId, db::FeedbackValue::Loved);
         }
 
         for (const ArtistId id : params.artistIds)
-            core::Service<feedback::IFeedbackService>::get()->star(context.getUser()->getId(), id);
+            core::Service<feedback::IFeedbackService>::get()->setFeedback(context.getUser()->getId(), id, db::FeedbackValue::Loved);
 
         for (const ReleaseId id : params.releaseIds)
-            core::Service<feedback::IFeedbackService>::get()->star(context.getUser()->getId(), id);
+            core::Service<feedback::IFeedbackService>::get()->setFeedback(context.getUser()->getId(), id, db::FeedbackValue::Loved);
 
         for (const TrackId id : params.trackIds)
-            core::Service<feedback::IFeedbackService>::get()->star(context.getUser()->getId(), id);
+            core::Service<feedback::IFeedbackService>::get()->setFeedback(context.getUser()->getId(), id, db::FeedbackValue::Loved);
 
-        return Response::createOkResponse(context.getServerProtocolVersion());
+        return Response::createOkResponse();
     }
 
     Response handleUnstarRequest(RequestContext& context)
@@ -140,19 +140,19 @@ namespace lms::api::subsonic
         for (const DirectoryId id : params.directoryIds)
         {
             if (const ReleaseId releaseId{ getReleaseIdFromDirectory(context.getDbSession(), id) }; releaseId.isValid())
-                core::Service<feedback::IFeedbackService>::get()->unstar(context.getUser()->getId(), releaseId);
+                core::Service<feedback::IFeedbackService>::get()->setFeedback(context.getUser()->getId(), releaseId, db::FeedbackValue::None);
         }
 
         for (const ArtistId id : params.artistIds)
-            core::Service<feedback::IFeedbackService>::get()->unstar(context.getUser()->getId(), id);
+            core::Service<feedback::IFeedbackService>::get()->setFeedback(context.getUser()->getId(), id, db::FeedbackValue::None);
 
         for (const ReleaseId id : params.releaseIds)
-            core::Service<feedback::IFeedbackService>::get()->unstar(context.getUser()->getId(), id);
+            core::Service<feedback::IFeedbackService>::get()->setFeedback(context.getUser()->getId(), id, db::FeedbackValue::None);
 
         for (const TrackId id : params.trackIds)
-            core::Service<feedback::IFeedbackService>::get()->unstar(context.getUser()->getId(), id);
+            core::Service<feedback::IFeedbackService>::get()->setFeedback(context.getUser()->getId(), id, db::FeedbackValue::None);
 
-        return Response::createOkResponse(context.getServerProtocolVersion());
+        return Response::createOkResponse();
     }
 
     Response handleSetRating(RequestContext& context)
@@ -171,7 +171,7 @@ namespace lms::api::subsonic
         else if (const TrackId * trackId{ std::get_if<TrackId>(&params.id) })
             core::Service<feedback::IFeedbackService>::get()->setRating(context.getUser()->getId(), *trackId, params.rating);
 
-        return Response::createOkResponse(context.getServerProtocolVersion());
+        return Response::createOkResponse();
     }
 
     Response handleScrobble(RequestContext& context)
@@ -209,6 +209,6 @@ namespace lms::api::subsonic
             }
         }
 
-        return Response::createOkResponse(context.getServerProtocolVersion());
+        return Response::createOkResponse();
     }
 } // namespace lms::api::subsonic

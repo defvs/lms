@@ -23,6 +23,9 @@
 #include <Wt/Dbo/WtSqlTraits.h>
 
 #include "core/PartialDateTime.hpp"
+#include "core/String.hpp"
+#include "core/TaggedType.hpp"
+
 #include "database/Session.hpp"
 #include "database/Types.hpp"
 #include "database/objects/Artist.hpp"
@@ -35,6 +38,7 @@
 #include "database/objects/MediaLibrary.hpp"
 #include "database/objects/Medium.hpp"
 #include "database/objects/Mood.hpp"
+#include "database/objects/Movement.hpp"
 #include "database/objects/ReleaseArtistLink.hpp"
 #include "database/objects/Track.hpp"
 #include "database/objects/TrackArtistLink.hpp"
@@ -42,6 +46,7 @@
 #include "database/objects/TrackEmbeddedImageLink.hpp"
 #include "database/objects/TrackLyrics.hpp"
 #include "database/objects/User.hpp"
+#include "database/objects/Work.hpp"
 
 #include "SqlQuery.hpp"
 #include "Utils.hpp"
@@ -61,16 +66,17 @@ namespace lms::db
 {
     namespace
     {
+        using GroupByRelease = core::TaggedBool<struct GroupByReleaseTag>;
+
         template<typename ResultType>
-        Wt::Dbo::Query<ResultType> createQuery(Session& session, std::string_view itemToSelect, const Release::FindParameters& params)
+        Wt::Dbo::Query<ResultType> createQuery(Session& session, std::string_view itemToSelect, const Release::FindParameters& params, GroupByRelease groupByRelease)
         {
             assert(params.keywords.empty() || params.name.empty());
             assert(!params.directory.isValid() || !params.parentDirectory.isValid());
 
             auto query{ session.getDboSession()->query<ResultType>("SELECT " + std::string{ itemToSelect } + " from release r") };
 
-            if (params.sortMethod == ReleaseSortMethod::ArtistNameThenName
-                || params.sortMethod == ReleaseSortMethod::LastWrittenDesc
+            if (params.sortMethod == ReleaseSortMethod::LastWrittenDesc
                 || params.sortMethod == ReleaseSortMethod::AddedDesc
                 || params.sortMethod == ReleaseSortMethod::DateAsc
                 || params.sortMethod == ReleaseSortMethod::DateDesc
@@ -92,6 +98,9 @@ namespace lms::db
             {
                 query.join("track t ON t.release_id = r.id");
             }
+
+            if (!params.keywords.empty())
+                query.leftJoin("medium m ON m.release_id = r.id");
 
             if (params.parentDirectory.isValid())
             {
@@ -145,19 +154,33 @@ namespace lms::db
             if (!params.name.empty())
                 query.where("r.name = ?").bind(params.name);
 
-            for (std::string_view keyword : params.keywords)
-                query.where("r.name LIKE ? ESCAPE '" ESCAPE_CHAR_STR "'").bind("%" + utils::escapeForLikeKeyword(keyword) + "%");
-
-            if (params.starringUser.isValid())
+            if (!params.keywords.empty())
             {
-                assert(params.feedbackBackend);
-                query.join("starred_release s_r ON s_r.release_id = r.id")
-                    .where("s_r.user_id = ?")
-                    .bind(params.starringUser)
-                    .where("s_r.backend = ?")
-                    .bind(*params.feedbackBackend)
-                    .where("s_r.sync_state <> ?")
-                    .bind(SyncState::PendingRemove);
+                std::vector<std::string> nameClauses;
+                std::vector<std::string> mediumNameClauses;
+
+                for (const std::string_view keyword : params.keywords)
+                {
+                    nameClauses.push_back("r.name LIKE ? ESCAPE '" ESCAPE_CHAR_STR "'");
+                    query.bind("%" + utils::escapeForLikeKeyword(keyword) + "%");
+                }
+
+                for (const std::string_view keyword : params.keywords)
+                {
+                    mediumNameClauses.push_back("m.name LIKE ? ESCAPE '" ESCAPE_CHAR_STR "'");
+                    query.bind("%" + utils::escapeForLikeKeyword(keyword) + "%");
+                }
+
+                query.where("(" + core::stringUtils::joinStrings(nameClauses, " AND ") + ") OR (" + core::stringUtils::joinStrings(mediumNameClauses, " AND ") + ")");
+            }
+
+            if (params.feedbackUser.isValid() || params.feedbackValue)
+            {
+                query.join("release_feedback r_f ON r_f.release_id = r.id");
+                if (params.feedbackUser.isValid())
+                    query.where("r_f.user_id = ?").bind(params.feedbackUser);
+                if (params.feedbackValue)
+                    query.where("r_f.value = ?").bind(static_cast<int>(*params.feedbackValue));
             }
 
             if (params.artist.isValid())
@@ -167,18 +190,13 @@ namespace lms::db
                 query.where("r_a_l.artist_id = ?").bind(params.artist);
             }
 
-            if (params.trackArtist.isValid()
-                || params.sortMethod == ReleaseSortMethod::ArtistNameThenName)
+            if (params.trackArtist.isValid())
             {
                 assert(!params.artist.isValid());
 
                 query.join("track_artist_link t_a_l ON t_a_l.track_id = t.id");
 
-                if (params.trackArtist.isValid())
-                    query.where("t_a_l.artist_id = ?").bind(params.trackArtist);
-
-                if (params.sortMethod == ReleaseSortMethod::ArtistNameThenName)
-                    query.join("artist a ON a.id = t_a_l.artist_id");
+                query.where("t_a_l.artist_id = ?").bind(params.trackArtist);
 
                 if (!params.trackArtistLinkTypes.empty())
                 {
@@ -213,7 +231,7 @@ namespace lms::db
                 WhereClause clusterClause;
                 for (const ClusterId clusterId : params.filters.clusters)
                 {
-                    clusterClause.Or(WhereClause("t_c.cluster_id = ?"));
+                    clusterClause.Or(WhereClause{ "t_c.cluster_id = ?" });
                     query.bind(clusterId);
                 }
 
@@ -268,37 +286,40 @@ namespace lms::db
                 query.orderBy("r.name COLLATE NOCASE");
                 break;
             case ReleaseSortMethod::SortName:
-                query.orderBy("r.sort_name COLLATE NOCASE");
+                query.orderBy("COALESCE(NULLIF(r.sort_name, ''), r.name) COLLATE NOCASE");
                 break;
             case ReleaseSortMethod::ArtistNameThenName:
-                query.orderBy("a.name COLLATE NOCASE, r.name COLLATE NOCASE");
+                query.orderBy("COALESCE(NULLIF(r.artist_display_name, ''), r.name) COLLATE NOCASE, COALESCE(NULLIF(r.sort_name, ''), r.name) COLLATE NOCASE");
                 break;
             case ReleaseSortMethod::Random:
                 query.orderBy("RANDOM()");
                 break;
             case ReleaseSortMethod::LastWrittenDesc:
-                query.orderBy("t.file_last_write DESC");
+                query.orderBy("MAX(t.file_last_write) DESC, COALESCE(NULLIF(r.sort_name, ''), r.name) COLLATE NOCASE");
                 break;
             case ReleaseSortMethod::AddedDesc:
-                query.orderBy("t.file_added DESC");
+                query.orderBy("MIN(t.file_added) DESC, COALESCE(NULLIF(r.sort_name, ''), r.name) COLLATE NOCASE");
                 break;
             case ReleaseSortMethod::DateAsc:
-                query.orderBy("t.date ASC, r.name COLLATE NOCASE");
+                query.orderBy("MIN(t.date) ASC, COALESCE(NULLIF(r.sort_name, ''), r.name) COLLATE NOCASE");
                 break;
             case ReleaseSortMethod::DateDesc:
-                query.orderBy("t.date DESC, r.name COLLATE NOCASE");
+                query.orderBy("MIN(t.date) DESC, COALESCE(NULLIF(r.sort_name, ''), r.name) COLLATE NOCASE");
                 break;
             case ReleaseSortMethod::OriginalDate:
-                query.orderBy("COALESCE(t.original_date, t.date), r.name COLLATE NOCASE");
+                query.orderBy("MIN(COALESCE(t.original_date, t.date)) ASC, COALESCE(NULLIF(r.sort_name, ''), r.name) COLLATE NOCASE");
                 break;
             case ReleaseSortMethod::OriginalDateDesc:
-                query.orderBy("COALESCE(t.original_date, t.date) DESC, r.name COLLATE NOCASE");
+                query.orderBy("MIN(COALESCE(t.original_date, t.date)) DESC, COALESCE(NULLIF(r.sort_name, ''), r.name) COLLATE NOCASE");
                 break;
-            case ReleaseSortMethod::StarredDateDesc:
-                assert(params.starringUser.isValid());
-                query.orderBy("s_r.date_time DESC");
+            case ReleaseSortMethod::FeedbackDateDesc:
+                assert(params.feedbackUser.isValid());
+                query.orderBy("r_f.date_time DESC");
                 break;
             }
+
+            if (groupByRelease.value())
+                query.groupBy("r.id");
 
             return query;
         }
@@ -356,7 +377,7 @@ namespace lms::db
         return utils::fetchQuerySingleResult(session.getDboSession()->query<Wt::Dbo::ptr<Country>>("SELECT c from country c").where("c.name = ?").bind(name));
     }
 
-    RangeResults<CountryId> Country::findOrphanIds(Session& session, std::optional<Range> range)
+    std::vector<CountryId> Country::findOrphanIds(Session& session, std::optional<Range> range)
     {
         session.checkReadTransaction();
 
@@ -418,7 +439,7 @@ namespace lms::db
         });
     }
 
-    RangeResults<LabelId> Label::findOrphanIds(Session& session, std::optional<Range> range)
+    std::vector<LabelId> Label::findOrphanIds(Session& session, std::optional<Range> range)
     {
         session.checkReadTransaction();
 
@@ -480,7 +501,7 @@ namespace lms::db
         });
     }
 
-    RangeResults<ReleaseTypeId> ReleaseType::findOrphanIds(Session& session, std::optional<Range> range)
+    std::vector<ReleaseTypeId> ReleaseType::findOrphanIds(Session& session, std::optional<Range> range)
     {
         session.checkReadTransaction();
 
@@ -490,7 +511,7 @@ namespace lms::db
     }
 
     Release::Release(const std::string& name, const std::optional<core::UUID>& MBID)
-        : _name{ std::string(name, 0, _maxNameLength) }
+        : _name{ core::stringUtils::utf8Truncate(name, _maxNameLength) }
         , _MBID{ MBID }
     {
     }
@@ -527,7 +548,7 @@ namespace lms::db
         return utils::fetchQuerySingleResult(session.getDboSession()->query<int>("SELECT COUNT(*) FROM release"));
     }
 
-    RangeResults<ReleaseId> Release::findOrphanIds(Session& session, std::optional<Range> range)
+    std::vector<ReleaseId> Release::findOrphanIds(Session& session, std::optional<Range> range)
     {
         session.checkReadTransaction();
 
@@ -574,11 +595,11 @@ namespace lms::db
         return IdRange<ReleaseId>{ .first = std::get<0>(res), .last = std::get<1>(res) };
     }
 
-    RangeResults<Release::pointer> Release::find(Session& session, const FindParameters& params)
+    std::vector<Release::pointer> Release::find(Session& session, const FindParameters& params)
     {
         session.checkReadTransaction();
 
-        auto query{ createQuery<Wt::Dbo::ptr<Release>>(session, "DISTINCT r", params) };
+        auto query{ createQuery<Wt::Dbo::ptr<Release>>(session, "r", params, GroupByRelease{ true }) };
         return utils::execRangeQuery<pointer>(query, params.range);
     }
 
@@ -586,15 +607,15 @@ namespace lms::db
     {
         session.checkReadTransaction();
 
-        auto query{ createQuery<Wt::Dbo::ptr<Release>>(session, "DISTINCT r", params) };
+        auto query{ createQuery<Wt::Dbo::ptr<Release>>(session, "r", params, GroupByRelease{ true }) };
         utils::forEachQueryRangeResult(query, params.range, func);
     }
 
-    RangeResults<ReleaseId> Release::findIds(Session& session, const FindParameters& params)
+    std::vector<ReleaseId> Release::findIds(Session& session, const FindParameters& params)
     {
         session.checkReadTransaction();
 
-        auto query{ createQuery<ReleaseId>(session, "DISTINCT r.id", params) };
+        auto query{ createQuery<ReleaseId>(session, "r.id", params, GroupByRelease{ true }) };
         return utils::execRangeQuery<ReleaseId>(query, params.range);
     }
 
@@ -612,7 +633,7 @@ namespace lms::db
     {
         session.checkReadTransaction();
 
-        return utils::fetchQuerySingleResult(createQuery<int>(session, "COUNT(DISTINCT r.id)", params));
+        return utils::fetchQuerySingleResult(createQuery<int>(session, "COUNT(DISTINCT r.id)", params, GroupByRelease{ false }));
     }
 
     core::PartialDateTime Release::getDate() const
@@ -980,11 +1001,11 @@ namespace lms::db
 
         oss << "SELECT c from cluster c INNER JOIN track_cluster t_c ON t_c.cluster_id = c.id INNER JOIN track t ON t.id = t_c.track_id ";
 
-        where.And(WhereClause("t.release_id = ?")).bind(getId().toString());
+        where.And(WhereClause{ "t.release_id = ?" }).bind(getId().toString());
         {
             WhereClause clusterClause;
             for (const ClusterTypeId clusterTypeId : clusterTypeIds)
-                clusterClause.Or(WhereClause("c.cluster_type_id = ?")).bind(clusterTypeId.toString());
+                clusterClause.Or(WhereClause{ "c.cluster_type_id = ?" }).bind(clusterTypeId.toString());
             where.And(clusterClause);
         }
         oss << " " << where.get();

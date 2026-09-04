@@ -34,12 +34,12 @@ namespace lms::db::tests
         {
             auto transaction{ session.createReadTransaction() };
 
-            auto starredTrack{ RatedTrack::find(session, track->getId(), user->getId()) };
-            EXPECT_FALSE(starredTrack);
+            auto ratedTrack{ RatedTrack::find(session, track->getId(), user->getId()) };
+            EXPECT_FALSE(ratedTrack);
             EXPECT_EQ(RatedTrack::getCount(session), 0);
 
             auto tracks{ Track::findIds(session, Track::FindParameters{}) };
-            EXPECT_EQ(tracks.results.size(), 1);
+            EXPECT_EQ(tracks.size(), 1);
         }
 
         ScopedRatedTrack ratedTrack{ session, track.lockAndGet(), user.lockAndGet() };

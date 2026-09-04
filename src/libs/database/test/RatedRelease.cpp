@@ -34,12 +34,12 @@ namespace lms::db::tests
         {
             auto transaction{ session.createReadTransaction() };
 
-            auto starredRelease{ RatedRelease::find(session, release->getId(), user->getId()) };
-            EXPECT_FALSE(starredRelease);
+            auto ratedRelease{ RatedRelease::find(session, release->getId(), user->getId()) };
+            EXPECT_FALSE(ratedRelease);
             EXPECT_EQ(RatedRelease::getCount(session), 0);
 
             auto releases{ Release::findIds(session, Release::FindParameters{}) };
-            EXPECT_EQ(releases.results.size(), 1);
+            EXPECT_EQ(releases.size(), 1);
         }
 
         ScopedRatedRelease ratedRelease{ session, release.lockAndGet(), user.lockAndGet() };

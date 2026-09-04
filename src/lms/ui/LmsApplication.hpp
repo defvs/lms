@@ -25,6 +25,8 @@
 
 #include <Wt/WApplication.h>
 
+#include "core/UUID.hpp"
+
 #include "database/Object.hpp"
 #include "database/objects/TrackId.hpp"
 #include "database/objects/Types.hpp"
@@ -54,10 +56,10 @@ namespace lms::ui
     class LmsApplication : public Wt::WApplication
     {
     public:
-        LmsApplication(const Wt::WEnvironment& env, db::IDb& db, LmsApplicationManager& appManager, AuthenticationBackend authBackend);
-        ~LmsApplication();
+        LmsApplication(const Wt::WEnvironment& env, db::IDb& db, LmsApplicationManager& appManager, AuthenticationBackend authBackend, const core::UUID& serverInstanceId);
+        ~LmsApplication() override;
 
-        static std::unique_ptr<Wt::WApplication> create(const Wt::WEnvironment& env, db::IDb& db, LmsApplicationManager& appManager, AuthenticationBackend authBackend);
+        static std::unique_ptr<Wt::WApplication> create(const Wt::WEnvironment& env, db::IDb& db, LmsApplicationManager& appManager, AuthenticationBackend authBackend, const core::UUID& serverInstanceId);
         static LmsApplication* instance();
 
         // Session application data
@@ -77,6 +79,7 @@ namespace lms::ui
         scanner::Events& getScannerEvents() { return _scannerEvents; }
 
         AuthenticationBackend getAuthBackend() const { return _authBackend; }
+        core::UUID getServerInstanceId() const { return _serverInstanceId; }
 
         // Utils
         static void post(const std::string& sessionId, const std::function<void()>& func);
@@ -117,6 +120,7 @@ namespace lms::ui
         Wt::Signal<db::TrackId, std::optional<db::Rating>> _trackRatingChanged;
         LmsApplicationManager& _appManager;
         const AuthenticationBackend _authBackend;
+        const core::UUID _serverInstanceId;
         const bool _areDownloadsEnabled;
         scanner::Events _scannerEvents;
         struct UserAuthInfo

@@ -66,9 +66,9 @@ namespace lms::db
             ArtistSortMethod sortMethod{ ArtistSortMethod::None };
             std::optional<Range> range;
             Wt::WDateTime writtenAfter;
-            UserId starringUser;                            // only artists starred by this user
-            std::optional<FeedbackBackend> feedbackBackend; // and for this feedback backend
-            TrackId track;                                  // artists involved in this track
+            UserId feedbackUser;                        // if valid, only artists that have feedback from this user
+            std::optional<FeedbackValue> feedbackValue; // if set, only artists with feedback matching this value (any user, unless feedbackUser is also set)
+            TrackId track;                              // artists involved in this track
 
             FindParameters& setFilters(const Filters& _filters)
             {
@@ -105,10 +105,14 @@ namespace lms::db
                 writtenAfter = _after;
                 return *this;
             }
-            FindParameters& setStarringUser(UserId _user, FeedbackBackend _feedbackBackend)
+            FindParameters& setFeedbackUser(UserId _user)
             {
-                starringUser = _user;
-                feedbackBackend = _feedbackBackend;
+                feedbackUser = _user;
+                return *this;
+            }
+            FindParameters& setFeedbackValue(std::optional<FeedbackValue> _value)
+            {
+                feedbackValue = _value;
                 return *this;
             }
             FindParameters& setTrack(TrackId _track)
@@ -127,13 +131,14 @@ namespace lms::db
         static std::vector<pointer> find(Session& session, std::string_view name); // exact match on name field
         static void find(Session& session, ArtistId& lastRetrievedArtist, std::size_t count, const std::function<void(const Artist::pointer&)>& func, MediaLibraryId library = {});
         static void find(Session& session, const IdRange<ArtistId>& idRange, const std::function<void(const Artist::pointer&)>& func);
-        static RangeResults<pointer> find(Session& session, const FindParameters& params);
+        static std::vector<pointer> find(Session& session, const FindParameters& params);
         static void find(Session& session, const FindParameters& params, std::function<void(const pointer&)> func);
         static IdRange<ArtistId> findNextIdRange(Session& session, ArtistId lastRetrievedId, std::size_t count);
-        static RangeResults<ArtistId> findIds(Session& session, const FindParameters& params);
-        static RangeResults<ArtistId> findOrphanIds(Session& session, std::optional<Range> range = std::nullopt); // No track related
+        static std::vector<ArtistId> findIds(Session& session, const FindParameters& params);
+        static std::vector<ArtistId> findOrphanIds(Session& session, std::optional<Range> range = std::nullopt); // No track related
         static bool exists(Session& session, ArtistId id);
-        static RangeResults<pointer> findWithMBIDNameVariants(Session& session, ArtistId& lastRetrievedArtist, std::optional<Range> range = std::nullopt);
+        static std::vector<pointer> findWithMBIDMatchedNameOrSortNameVariants(Session& session, ArtistId& lastRetrievedArtist, std::optional<Range> range = std::nullopt);
+        static std::vector<pointer> findWithNonMBIDSortNameVariants(Session& session, ArtistId& lastRetrievedArtist, std::optional<Range> range = std::nullopt);
 
         // Updates
         static void updatePreferredArtwork(Session& session, ArtistId artistId, ArtworkId artworkId);

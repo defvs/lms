@@ -45,7 +45,10 @@ namespace lms::ui
         template<typename T, typename... Args>
         T* addNew(Args&&... args)
         {
-            return _elements->addNew<T>(std::forward<Args>(args)...);
+            auto widget{ std::make_unique<T>(std::forward<Args>(args)...) };
+            T* ptr{ widget.get() };
+            add(std::move(widget));
+            return ptr;
         }
 
         void remove(Wt::WWidget& widget);
@@ -59,12 +62,21 @@ namespace lms::ui
 
         void setHasMore(bool hasMore); // can be used to add elements afterwards
 
+        // Hints shown when a fetch round ends. Unset (default) means show nothing
+        void setNoResultsMessage(std::optional<Wt::WString> msg);
+        void setLimitReachedMessage(std::optional<Wt::WString> msg);
+
     private:
         void clear() override;
         void displayLoadingIndicator();
         void hideLoadingIndicator();
+        void displayResultHint(const Wt::WString& msg);
+        void hideResultHint();
 
         Wt::WContainerWidget* _elements;
         Wt::WTemplate* _loadingIndicator;
+        bool _gotItems{};
+        std::optional<Wt::WString> _noResultsMsg;
+        std::optional<Wt::WString> _limitReachedMsg;
     };
 } // namespace lms::ui

@@ -50,7 +50,7 @@ namespace lms::db
         Random,
         LastWrittenDesc,
         AddedDesc,
-        StarredDateDesc,
+        FeedbackDateDesc,
     };
 
     enum class ClusterSortMethod
@@ -114,6 +114,13 @@ namespace lms::db
         PubDateDesc,
     };
 
+    enum class RecommendationEngineType
+    {
+        Clusters = 0,
+        None = 2,
+        AudioSimilarity = 3,
+    };
+
     enum class ReleaseArtistLinkSortMethod
     {
         None,
@@ -134,7 +141,7 @@ namespace lms::db
         Random,
         LastWrittenDesc,
         AddedDesc,
-        StarredDateDesc,
+        FeedbackDateDesc,
     };
 
     enum class ReleaseTypeSortMethod
@@ -158,6 +165,12 @@ namespace lms::db
         TrackListIndexAscThenSizeDesc,
     };
 
+    enum class TrackFeedbackSortMethod
+    {
+        None,
+        Id,
+    };
+
     enum class TrackListSortMethod
     {
         None,
@@ -172,7 +185,7 @@ namespace lms::db
         Random,
         LastWrittenDesc,
         AddedDesc,
-        StarredDateDesc,
+        FeedbackDateDesc,
         AbsoluteFilePath,
         Name,
         DateDescAndRelease,
@@ -226,15 +239,20 @@ namespace lms::db
 
     enum class ScrobblingBackend
     {
-        Internal = 0,
         ListenBrainz = 1,
         LastFm = 2,
     };
 
     enum class FeedbackBackend
     {
-        Internal = 0,
         ListenBrainz = 1,
+    };
+
+    enum class FeedbackValue
+    {
+        None = 0,
+        Loved = 1,
+        Hated = 2,
     };
 
     enum class SyncState

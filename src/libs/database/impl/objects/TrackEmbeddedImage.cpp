@@ -27,7 +27,9 @@
 #include "database/objects/Grouping.hpp"
 #include "database/objects/Language.hpp"
 #include "database/objects/Mood.hpp"
+#include "database/objects/Movement.hpp"
 #include "database/objects/Track.hpp"
+#include "database/objects/Work.hpp"
 
 #include "database/objects/TrackEmbeddedImageLink.hpp"
 
@@ -150,12 +152,22 @@ namespace lms::db
         return utils::fetchQuerySingleResult(query);
     }
 
-    RangeResults<TrackEmbeddedImageId> TrackEmbeddedImage::findOrphanIds(Session& session, std::optional<Range> range)
+    std::vector<TrackEmbeddedImageId> TrackEmbeddedImage::findOrphanIds(Session& session, std::optional<Range> range)
     {
         session.checkReadTransaction();
 
         auto query{ session.getDboSession()->query<TrackEmbeddedImageId>("SELECT t_e_i.id FROM track_embedded_image t_e_i LEFT JOIN track_embedded_image_link t_e_i_l ON t_e_i.id = t_e_i_l.track_embedded_image_id WHERE t_e_i_l.track_embedded_image_id IS NULL") };
         return utils::execRangeQuery<TrackEmbeddedImageId>(query, range);
+    }
+
+    std::optional<core::media::ImageFormat> TrackEmbeddedImage::getFormat() const
+    {
+        return detail::getMediaImageFormat(_format);
+    }
+
+    void TrackEmbeddedImage::setFormat(core::media::ImageFormat format)
+    {
+        _format = detail::getDbImageFormat(format);
     }
 
 } // namespace lms::db

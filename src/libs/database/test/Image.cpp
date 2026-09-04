@@ -42,6 +42,7 @@ namespace lms::db::tests
             EXPECT_EQ(img->getWidth(), 0);
             EXPECT_EQ(img->getHeight(), 0);
             EXPECT_EQ(img->getFileSize(), 0);
+            EXPECT_EQ(img->getFormat(), std::nullopt);
         }
 
         {
@@ -53,6 +54,7 @@ namespace lms::db::tests
             img.modify()->setWidth(640);
             img.modify()->setHeight(480);
             img.modify()->setFileSize(1024 * 1024);
+            img.modify()->setFormat(core::media::ImageFormat::JPEG);
         }
 
         {
@@ -65,6 +67,7 @@ namespace lms::db::tests
             EXPECT_EQ(img->getWidth(), 640);
             EXPECT_EQ(img->getHeight(), 480);
             EXPECT_EQ(img->getFileSize(), 1024 * 1024);
+            EXPECT_EQ(img->getFormat(), core::media::ImageFormat::JPEG);
         }
 
         {
@@ -83,7 +86,7 @@ namespace lms::db::tests
 
         {
             auto transaction{ session.createReadTransaction() };
-            EXPECT_EQ(Image::find(session, Image::FindParameters{}.setDirectory(directory.getId())).results.size(), 0);
+            EXPECT_EQ(Image::find(session, Image::FindParameters{}.setDirectory(directory.getId())).size(), 0);
         }
 
         {
@@ -93,7 +96,7 @@ namespace lms::db::tests
 
         {
             auto transaction{ session.createReadTransaction() };
-            const auto results{ Image::find(session, Image::FindParameters{}.setDirectory(directory.getId())).results };
+            const auto results{ Image::find(session, Image::FindParameters{}.setDirectory(directory.getId())) };
             ASSERT_EQ(results.size(), 1);
             EXPECT_EQ(results.front()->getId(), image.getId());
         }
@@ -138,8 +141,8 @@ namespace lms::db::tests
             Image::FindParameters params;
             params.setFileStem(fileStem);
             const auto results{ Image::find(session, params) };
-            ASSERT_EQ(results.results.size(), 1);
-            EXPECT_EQ(results.results[0]->getId(), image.getId());
+            ASSERT_EQ(results.size(), 1);
+            EXPECT_EQ(results[0]->getId(), image.getId());
         }
 
         {
@@ -147,8 +150,8 @@ namespace lms::db::tests
             Image::FindParameters params;
             params.setFileStem(fileStem, Image::FindParameters::ProcessWildcards{ true });
             const auto results{ Image::find(session, params) };
-            ASSERT_EQ(results.results.size(), 1);
-            EXPECT_EQ(results.results[0]->getId(), image.getId());
+            ASSERT_EQ(results.size(), 1);
+            EXPECT_EQ(results[0]->getId(), image.getId());
         }
 
         {
@@ -156,7 +159,7 @@ namespace lms::db::tests
             Image::FindParameters params;
             params.setFileStem("nonexistent");
             const auto results{ Image::find(session, params) };
-            EXPECT_EQ(results.results.size(), 0);
+            EXPECT_EQ(results.size(), 0);
         }
 
         {
@@ -164,7 +167,7 @@ namespace lms::db::tests
             Image::FindParameters params;
             params.setFileStem("ima*");
             const auto results{ Image::find(session, params) };
-            ASSERT_EQ(results.results.size(), 0);
+            ASSERT_EQ(results.size(), 0);
         }
 
         {
@@ -172,8 +175,8 @@ namespace lms::db::tests
             Image::FindParameters params;
             params.setFileStem("ima*", Image::FindParameters::ProcessWildcards{ true });
             const auto results{ Image::find(session, params) };
-            ASSERT_EQ(results.results.size(), 1);
-            EXPECT_EQ(results.results[0]->getId(), image.getId());
+            ASSERT_EQ(results.size(), 1);
+            EXPECT_EQ(results[0]->getId(), image.getId());
         }
 
         {
@@ -181,8 +184,8 @@ namespace lms::db::tests
             Image::FindParameters params;
             params.setFileStem("*ge", Image::FindParameters::ProcessWildcards{ true });
             const auto results{ Image::find(session, params) };
-            ASSERT_EQ(results.results.size(), 1);
-            EXPECT_EQ(results.results[0]->getId(), image.getId());
+            ASSERT_EQ(results.size(), 1);
+            EXPECT_EQ(results[0]->getId(), image.getId());
         }
 
         {
@@ -190,8 +193,8 @@ namespace lms::db::tests
             Image::FindParameters params;
             params.setFileStem("*g*", Image::FindParameters::ProcessWildcards{ true });
             const auto results{ Image::find(session, params) };
-            ASSERT_EQ(results.results.size(), 1);
-            EXPECT_EQ(results.results[0]->getId(), image.getId());
+            ASSERT_EQ(results.size(), 1);
+            EXPECT_EQ(results[0]->getId(), image.getId());
         }
 
         {
@@ -199,8 +202,8 @@ namespace lms::db::tests
             Image::FindParameters params;
             params.setFileStem("*", Image::FindParameters::ProcessWildcards{ true });
             const auto results{ Image::find(session, params) };
-            ASSERT_EQ(results.results.size(), 1);
-            EXPECT_EQ(results.results[0]->getId(), image.getId());
+            ASSERT_EQ(results.size(), 1);
+            EXPECT_EQ(results[0]->getId(), image.getId());
         }
 
         {
@@ -208,7 +211,7 @@ namespace lms::db::tests
             Image::FindParameters params;
             params.setFileStem("ima%");
             const auto results{ Image::find(session, params) };
-            ASSERT_EQ(results.results.size(), 0);
+            ASSERT_EQ(results.size(), 0);
         }
 
         {
@@ -216,7 +219,7 @@ namespace lms::db::tests
             Image::FindParameters params;
             params.setFileStem("ima%", Image::FindParameters::ProcessWildcards{ true });
             const auto results{ Image::find(session, params) };
-            ASSERT_EQ(results.results.size(), 0);
+            ASSERT_EQ(results.size(), 0);
         }
     }
 

@@ -21,6 +21,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <system_error>
 
 #include "core/ILogger.hpp"
@@ -29,6 +30,8 @@
 #include "database/Session.hpp"
 #include "database/objects/Artwork.hpp"
 #include "database/objects/Podcast.hpp"
+#include "image/Exception.hpp"
+#include "image/Image.hpp"
 
 #include "Executor.hpp"
 #include "Utils.hpp"
@@ -37,7 +40,7 @@ namespace lms::podcast
 {
     namespace
     {
-        void createPodcastArtwork(db::Session& session, db::PodcastId podcastId, const std::filesystem::path& filePath, std::string_view contentType)
+        void createPodcastArtwork(db::Session& session, db::PodcastId podcastId, const std::filesystem::path& filePath, const image::ImageProperties& probedImage)
         {
             auto transaction{ session.createWriteTransaction() };
 
@@ -45,7 +48,7 @@ namespace lms::podcast
             if (!dbPodcast)
                 return; // may have been deleted by admin
 
-            if (db::Artwork::pointer artwork{ utils::createArtworkFromImage(session, filePath, contentType) })
+            if (db::Artwork::pointer artwork{ utils::createArtworkFromImage(session, filePath, probedImage) })
                 dbPodcast.modify()->setArtwork(artwork);
         }
     } // namespace
@@ -121,9 +124,21 @@ namespace lms::podcast
         };
         params.onSuccessFunc = [=, this](const Wt::Http::Message& msg) {
             getExecutor().post([=, this] {
-                const std::string body{ msg.body() }; // API enforces a copy here
+                const std::string body{ msg.body() }; // API enforces a copy here :(
+                const auto bodySpan{ std::as_bytes(std::span{ body.data(), body.size() }) };
+                std::optional<image::ImageProperties> probedImage;
+                try
+                {
+                    probedImage = image::probeImage(bodySpan);
+                }
+                catch (const image::Exception& e)
+                {
+                    LMS_LOG(PODCAST, WARNING, "Discarding non-image response for podcast artwork from '" << url << "': " << e.what());
+                    processNext();
+                    return;
+                }
 
-                std::ofstream file{ finalFilePath, std::ios::binary | std::ios::app };
+                std::ofstream file{ finalFilePath, std::ios::binary | std::ios::trunc };
                 if (!file)
                 {
                     std::error_code ec{ errno, std::generic_category() };
@@ -132,7 +147,7 @@ namespace lms::podcast
                     return;
                 }
 
-                file.write(body.data(), body.size());
+                file.write(body.data(), static_cast<std::streamsize>(body.size()));
                 if (!file)
                 {
                     std::error_code ec{ errno, std::generic_category() };
@@ -142,8 +157,7 @@ namespace lms::podcast
                 }
 
                 LMS_LOG(PODCAST, INFO, "Downloaded podcast artwork for podcast '" << podcast->getTitle());
-                const std::string* contentType{ msg.getHeader("Content-Type") };
-                createPodcastArtwork(getDb().getTLSSession(), podcastId, finalFilePath, contentType ? *contentType : "application/octet-stream");
+                createPodcastArtwork(getDb().getTLSSession(), podcastId, finalFilePath, *probedImage);
 
                 processNext();
             });

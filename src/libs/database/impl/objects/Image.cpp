@@ -27,6 +27,7 @@
 #include "database/objects/Directory.hpp"
 
 #include "Utils.hpp"
+#include "objects/detail/Types.hpp"
 #include "traits/IdTypeTraits.hpp"
 #include "traits/PathTraits.hpp"
 
@@ -105,7 +106,7 @@ namespace lms::db
         });
     }
 
-    RangeResults<Image::pointer> Image::find(Session& session, const FindParameters& params)
+    std::vector<Image::pointer> Image::find(Session& session, const FindParameters& params)
     {
         session.checkReadTransaction();
 
@@ -138,6 +139,16 @@ namespace lms::db
         assert(p.is_absolute());
         _fileAbsolutePath = p;
         _fileStem = p.stem().string();
+    }
+
+    std::optional<core::media::ImageFormat> Image::getFormat() const
+    {
+        return detail::getMediaImageFormat(_format);
+    }
+
+    void Image::setFormat(core::media::ImageFormat format)
+    {
+        _format = detail::getDbImageFormat(format);
     }
 
 } // namespace lms::db

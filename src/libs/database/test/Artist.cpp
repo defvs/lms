@@ -55,20 +55,20 @@ namespace lms::db::tests
             auto transaction{ session.createReadTransaction() };
 
             auto artists{ Artist::findIds(session, Artist::FindParameters{}) };
-            ASSERT_EQ(artists.results.size(), 1);
-            EXPECT_EQ(artists.results.front(), artist.getId());
+            ASSERT_EQ(artists.size(), 1);
+            EXPECT_EQ(artists.front(), artist.getId());
 
             artists = Artist::findOrphanIds(session);
-            ASSERT_EQ(artists.results.size(), 1);
-            EXPECT_EQ(artists.results.front(), artist.getId());
+            ASSERT_EQ(artists.size(), 1);
+            EXPECT_EQ(artists.front(), artist.getId());
         }
 
         {
             auto transaction{ session.createReadTransaction() };
 
             auto artists{ Artist::find(session, Artist::FindParameters{}) };
-            ASSERT_EQ(artists.results.size(), 1);
-            EXPECT_EQ(artists.results.front()->getId(), artist.getId());
+            ASSERT_EQ(artists.size(), 1);
+            EXPECT_EQ(artists.front()->getId(), artist.getId());
         }
 
         {
@@ -181,10 +181,7 @@ namespace lms::db::tests
             auto transaction{ session.createReadTransaction() };
 
             auto artists{ Artist::findIds(session, Artist::FindParameters{}) };
-            ASSERT_EQ(artists.results.size(), 0);
-            ASSERT_FALSE(artists.moreResults);
-            ASSERT_EQ(artists.range.offset, 0);
-            ASSERT_EQ(artists.range.size, 0);
+            ASSERT_EQ(artists.size(), 0);
         }
 
         ScopedArtist artist1{ session, "MyArtist1" };
@@ -195,43 +192,31 @@ namespace lms::db::tests
             auto transaction{ session.createReadTransaction() };
 
             auto artists{ Artist::findIds(session, Artist::FindParameters{}) };
-            ASSERT_EQ(artists.results.size(), 3);
-            ASSERT_FALSE(artists.moreResults);
-            ASSERT_EQ(artists.range.offset, 0);
-            ASSERT_EQ(artists.range.size, 3);
+            ASSERT_EQ(artists.size(), 3);
         }
 
         {
             auto transaction{ session.createReadTransaction() };
 
             auto artists{ Artist::findIds(session, Artist::FindParameters{}.setRange(Range{ 0, 1 })) };
-            ASSERT_EQ(artists.results.size(), 1);
-            ASSERT_TRUE(artists.moreResults);
-            ASSERT_EQ(artists.range.offset, 0);
-            ASSERT_EQ(artists.range.size, 1);
-            EXPECT_EQ(artists.results[0], artist1.getId());
+            ASSERT_EQ(artists.size(), 1);
+            EXPECT_EQ(artists[0], artist1.getId());
         }
 
         {
             auto transaction{ session.createReadTransaction() };
 
             auto artists{ Artist::findIds(session, Artist::FindParameters{}.setRange(Range{ 1, 1 })) };
-            ASSERT_EQ(artists.results.size(), 1);
-            ASSERT_TRUE(artists.moreResults);
-            ASSERT_EQ(artists.range.offset, 1);
-            ASSERT_EQ(artists.range.size, 1);
-            EXPECT_EQ(artists.results[0], artist2.getId());
+            ASSERT_EQ(artists.size(), 1);
+            EXPECT_EQ(artists[0], artist2.getId());
         }
 
         {
             auto transaction{ session.createReadTransaction() };
 
             auto artists{ Artist::findIds(session, Artist::FindParameters{}.setRange(Range{ 2, 1 })) };
-            ASSERT_EQ(artists.results.size(), 1);
-            ASSERT_FALSE(artists.moreResults);
-            ASSERT_EQ(artists.range.offset, 2);
-            ASSERT_EQ(artists.range.size, 1);
-            EXPECT_EQ(artists.results[0], artist3.getId());
+            ASSERT_EQ(artists.size(), 1);
+            EXPECT_EQ(artists[0], artist3.getId());
         }
     }
 
@@ -249,7 +234,7 @@ namespace lms::db::tests
 
         {
             auto transaction{ session.createReadTransaction() };
-            EXPECT_EQ(Artist::findOrphanIds(session).results.size(), 0);
+            EXPECT_EQ(Artist::findOrphanIds(session).size(), 0);
         }
 
         {
@@ -310,29 +295,29 @@ namespace lms::db::tests
         {
             auto transaction{ session.createReadTransaction() };
             auto tracks{ Track::findIds(session, Track::FindParameters{}.setName("MyTrackName").setArtistName("MyArtist")) };
-            ASSERT_EQ(tracks.results.size(), 1);
-            EXPECT_EQ(tracks.results.front(), track.getId());
+            ASSERT_EQ(tracks.size(), 1);
+            EXPECT_EQ(tracks.front(), track.getId());
         }
         {
             auto transaction{ session.createReadTransaction() };
             auto tracks{ Track::findIds(session, Track::FindParameters{}.setName("MyTrackName").setArtistName("MyArtistFoo")) };
-            EXPECT_EQ(tracks.results.size(), 0);
+            EXPECT_EQ(tracks.size(), 0);
         }
         {
             auto transaction{ session.createReadTransaction() };
             auto tracks{ Track::findIds(session, Track::FindParameters{}.setName("MyTrackNameFoo").setArtistName("MyArtist")) };
-            EXPECT_EQ(tracks.results.size(), 0);
+            EXPECT_EQ(tracks.size(), 0);
         }
         {
             auto transaction{ session.createReadTransaction() };
             auto artists{ Artist::findIds(session, Artist::FindParameters{}.setTrack(track->getId())) };
-            ASSERT_EQ(artists.results.size(), 1);
-            EXPECT_EQ(artists.results.front(), artist.getId());
+            ASSERT_EQ(artists.size(), 1);
+            EXPECT_EQ(artists.front(), artist.getId());
         }
 
         {
             auto transaction{ session.createReadTransaction() };
-            EXPECT_EQ(Artist::find(session, Artist::FindParameters{}.setReleaseArtistsOnly(true)).results.size(), 0);
+            EXPECT_EQ(Artist::find(session, Artist::FindParameters{}.setReleaseArtistsOnly(true)).size(), 0);
         }
     }
 
@@ -343,7 +328,7 @@ namespace lms::db::tests
 
         {
             auto transaction{ session.createReadTransaction() };
-            EXPECT_EQ(Artist::findOrphanIds(session).results, std::vector<db::ArtistId>{ artist.getId() });
+            EXPECT_EQ(Artist::findOrphanIds(session), std::vector<db::ArtistId>{ artist.getId() });
         }
 
         {
@@ -353,7 +338,7 @@ namespace lms::db::tests
 
         {
             auto transaction{ session.createReadTransaction() };
-            EXPECT_EQ(Artist::findOrphanIds(session).results.size(), 0);
+            EXPECT_EQ(Artist::findOrphanIds(session).size(), 0);
         }
     }
 
@@ -374,19 +359,19 @@ namespace lms::db::tests
         {
             auto transaction{ session.createReadTransaction() };
             auto artists{ Artist::findIds(session, Artist::FindParameters{}.setTrack(track->getId())) };
-            ASSERT_EQ(artists.results.size(), 1);
-            EXPECT_EQ(artists.results.front(), artist.getId());
+            ASSERT_EQ(artists.size(), 1);
+            EXPECT_EQ(artists.front(), artist.getId());
         }
         {
             auto transaction{ session.createReadTransaction() };
             auto artists{ Artist::findIds(session, Artist::FindParameters{}.setFilters(Filters{}.setMediaLibrary(library->getId()))) };
-            ASSERT_EQ(artists.results.size(), 1);
-            EXPECT_EQ(artists.results.front(), artist.getId());
+            ASSERT_EQ(artists.size(), 1);
+            EXPECT_EQ(artists.front(), artist.getId());
         }
         {
             auto transaction{ session.createReadTransaction() };
             auto artists{ Artist::findIds(session, Artist::FindParameters{}.setFilters(Filters{}.setMediaLibrary(otherLibrary->getId()))) };
-            EXPECT_EQ(artists.results.size(), 0);
+            EXPECT_EQ(artists.size(), 0);
         }
     }
 
@@ -416,26 +401,26 @@ namespace lms::db::tests
         {
             auto transaction{ session.createReadTransaction() };
             auto artists{ Artist::findIds(session, Artist::FindParameters{}) };
-            ASSERT_EQ(artists.results.size(), 1);
-            EXPECT_EQ(artists.results.front(), artist.getId());
+            ASSERT_EQ(artists.size(), 1);
+            EXPECT_EQ(artists.front(), artist.getId());
         }
 
         {
             auto transaction{ session.createReadTransaction() };
             auto artists{ Artist::findIds(session, Artist::FindParameters{}.setFilters(Filters{}.setMediaLibrary(library1->getId()))) };
-            ASSERT_EQ(artists.results.size(), 1);
-            EXPECT_EQ(artists.results.front(), artist.getId());
+            ASSERT_EQ(artists.size(), 1);
+            EXPECT_EQ(artists.front(), artist.getId());
         }
         {
             auto transaction{ session.createReadTransaction() };
             auto artists{ Artist::findIds(session, Artist::FindParameters{}.setFilters(Filters{}.setMediaLibrary(library2->getId()))) };
-            ASSERT_EQ(artists.results.size(), 1);
-            EXPECT_EQ(artists.results.front(), artist.getId());
+            ASSERT_EQ(artists.size(), 1);
+            EXPECT_EQ(artists.front(), artist.getId());
         }
         {
             auto transaction{ session.createReadTransaction() };
             auto artists{ Artist::findIds(session, Artist::FindParameters{}.setFilters(Filters{}.setMediaLibrary(otherLibrary->getId()))) };
-            EXPECT_EQ(artists.results.size(), 0);
+            EXPECT_EQ(artists.size(), 0);
         }
     }
 
@@ -460,15 +445,15 @@ namespace lms::db::tests
         {
             auto transaction{ session.createReadTransaction() };
             auto artists{ Artist::findIds(session, Artist::FindParameters{}) };
-            ASSERT_EQ(artists.results.size(), 1);
-            EXPECT_EQ(artists.results.front(), artist.getId());
+            ASSERT_EQ(artists.size(), 1);
+            EXPECT_EQ(artists.front(), artist.getId());
         }
 
         {
             auto transaction{ session.createReadTransaction() };
             auto artists{ Artist::findIds(session, Artist::FindParameters{}.setFilters(Filters{}.setMediaLibrary(library->getId()))) };
-            ASSERT_EQ(artists.results.size(), 1);
-            EXPECT_EQ(artists.results.front(), artist.getId());
+            ASSERT_EQ(artists.size(), 1);
+            EXPECT_EQ(artists.front(), artist.getId());
         }
 
         {
@@ -479,8 +464,8 @@ namespace lms::db::tests
             params.setFilters(Filters{}.setMediaLibrary(library.getId()));
 
             auto artists{ Artist::findIds(session, params) };
-            ASSERT_EQ(artists.results.size(), 1);
-            EXPECT_EQ(artists.results.front(), artist.getId());
+            ASSERT_EQ(artists.size(), 1);
+            EXPECT_EQ(artists.front(), artist.getId());
         }
 
         {
@@ -491,7 +476,7 @@ namespace lms::db::tests
             params.setFilters(Filters{}.setMediaLibrary(library.getId()));
 
             auto artists{ Artist::findIds(session, params) };
-            EXPECT_EQ(artists.results.size(), 0);
+            EXPECT_EQ(artists.size(), 0);
         }
 
         {
@@ -502,8 +487,8 @@ namespace lms::db::tests
             params.setFilters(Filters{}.setMediaLibrary(library.getId()));
 
             auto artists{ Artist::findIds(session, params) };
-            EXPECT_EQ(artists.results.size(), 1);
-            EXPECT_EQ(artists.results.front(), artist.getId());
+            EXPECT_EQ(artists.size(), 1);
+            EXPECT_EQ(artists.front(), artist.getId());
         }
     }
 
@@ -521,18 +506,18 @@ namespace lms::db::tests
 
         {
             auto transaction{ session.createReadTransaction() };
-            EXPECT_EQ(Artist::findOrphanIds(session, Range{}).results.size(), 0);
+            EXPECT_EQ(Artist::findOrphanIds(session, Range{}).size(), 0);
         }
 
         {
             auto transaction{ session.createReadTransaction() };
-            EXPECT_EQ(Artist::findIds(session, Artist::FindParameters{}).results.size(), 1);
-            EXPECT_EQ(Artist::findIds(session, Artist::FindParameters{}.setTrackArtistLinkType(TrackArtistLinkType::Artist)).results.size(), 1);
-            EXPECT_EQ(Artist::findIds(session, Artist::FindParameters{}.setTrackArtistLinkType(TrackArtistLinkType::Producer)).results.size(), 1);
-            EXPECT_EQ(Artist::findIds(session, Artist::FindParameters{}.setTrackArtistLinkType(TrackArtistLinkType::Writer)).results.size(), 1);
-            EXPECT_EQ(Artist::findIds(session, Artist::FindParameters{}.setTrackArtistLinkType(TrackArtistLinkType::Composer)).results.size(), 0);
+            EXPECT_EQ(Artist::findIds(session, Artist::FindParameters{}).size(), 1);
+            EXPECT_EQ(Artist::findIds(session, Artist::FindParameters{}.setTrackArtistLinkType(TrackArtistLinkType::Artist)).size(), 1);
+            EXPECT_EQ(Artist::findIds(session, Artist::FindParameters{}.setTrackArtistLinkType(TrackArtistLinkType::Producer)).size(), 1);
+            EXPECT_EQ(Artist::findIds(session, Artist::FindParameters{}.setTrackArtistLinkType(TrackArtistLinkType::Writer)).size(), 1);
+            EXPECT_EQ(Artist::findIds(session, Artist::FindParameters{}.setTrackArtistLinkType(TrackArtistLinkType::Composer)).size(), 0);
 
-            EXPECT_EQ(Artist::findIds(session, Artist::FindParameters{}.setReleaseArtistsOnly(true)).results.size(), 0);
+            EXPECT_EQ(Artist::findIds(session, Artist::FindParameters{}.setReleaseArtistsOnly(true)).size(), 0);
         }
 
         {
@@ -549,17 +534,17 @@ namespace lms::db::tests
             EXPECT_EQ(track->getArtistLinks().size(), 3);
 
             auto tracks{ Track::findIds(session, Track::FindParameters{}.setArtist(artist.getId())) };
-            EXPECT_EQ(tracks.results.size(), 1);
+            EXPECT_EQ(tracks.size(), 1);
 
             tracks = Track::findIds(session, Track::FindParameters{}.setArtist(artist.getId(), { TrackArtistLinkType::Producer }));
-            EXPECT_EQ(tracks.results.size(), 1);
+            EXPECT_EQ(tracks.size(), 1);
             tracks = Track::findIds(session, Track::FindParameters{}.setArtist(artist.getId(), { TrackArtistLinkType::Artist }));
-            EXPECT_EQ(tracks.results.size(), 1);
+            EXPECT_EQ(tracks.size(), 1);
             tracks = Track::findIds(session, Track::FindParameters{}.setArtist(artist.getId(), { TrackArtistLinkType::Writer }));
-            EXPECT_EQ(tracks.results.size(), 1);
+            EXPECT_EQ(tracks.size(), 1);
 
             tracks = Track::findIds(session, Track::FindParameters{}.setArtist(artist.getId(), { TrackArtistLinkType::Composer }));
-            EXPECT_EQ(tracks.results.size(), 0);
+            EXPECT_EQ(tracks.size(), 0);
         }
 
         {
@@ -609,7 +594,7 @@ namespace lms::db::tests
 
         {
             auto transaction{ session.createReadTransaction() };
-            EXPECT_EQ(Artist::findOrphanIds(session).results.size(), 0);
+            EXPECT_EQ(Artist::findOrphanIds(session).size(), 0);
         }
 
         {
@@ -623,32 +608,32 @@ namespace lms::db::tests
             EXPECT_EQ(track->getArtists({}).size(), 2);
             EXPECT_EQ(track->getArtists({ TrackArtistLinkType::Artist }).size(), 2);
             EXPECT_EQ(track->getArtists({ TrackArtistLinkType::Arranger }).size(), 0);
-            EXPECT_EQ(Artist::findIds(session, Artist::FindParameters{}).results.size(), 2);
-            EXPECT_EQ(Artist::findIds(session, Artist::FindParameters{}.setSortMethod(ArtistSortMethod::Random)).results.size(), 2);
+            EXPECT_EQ(Artist::findIds(session, Artist::FindParameters{}).size(), 2);
+            EXPECT_EQ(Artist::findIds(session, Artist::FindParameters{}.setSortMethod(ArtistSortMethod::Random)).size(), 2);
         }
 
         {
             auto transaction{ session.createReadTransaction() };
 
             auto tracks{ Track::findIds(session, Track::FindParameters{}.setArtist(artist1->getId())) };
-            ASSERT_EQ(tracks.results.size(), 1);
-            EXPECT_EQ(tracks.results.front(), track->getId());
+            ASSERT_EQ(tracks.size(), 1);
+            EXPECT_EQ(tracks.front(), track->getId());
 
             tracks = Track::findIds(session, Track::FindParameters{}.setArtist(artist2->getId()));
-            ASSERT_EQ(tracks.results.size(), 1);
-            EXPECT_EQ(tracks.results.front(), track->getId());
+            ASSERT_EQ(tracks.size(), 1);
+            EXPECT_EQ(tracks.front(), track->getId());
 
             tracks = Track::findIds(session, Track::FindParameters{}.setArtist(artist1->getId(), { TrackArtistLinkType::Arranger }));
-            EXPECT_EQ(tracks.results.size(), 0);
+            EXPECT_EQ(tracks.size(), 0);
 
             tracks = Track::findIds(session, Track::FindParameters{}.setArtist(artist1->getId(), { TrackArtistLinkType::Artist }));
-            EXPECT_EQ(tracks.results.size(), 1);
+            EXPECT_EQ(tracks.size(), 1);
 
             tracks = Track::findIds(session, Track::FindParameters{}.setArtist(artist2->getId(), { TrackArtistLinkType::Arranger }));
-            EXPECT_EQ(tracks.results.size(), 0);
+            EXPECT_EQ(tracks.size(), 0);
 
             tracks = Track::findIds(session, Track::FindParameters{}.setArtist(artist2->getId(), { TrackArtistLinkType::Artist }));
-            EXPECT_EQ(tracks.results.size(), 1);
+            EXPECT_EQ(tracks.size(), 1);
         }
 
         {
@@ -697,7 +682,7 @@ namespace lms::db::tests
 
         {
             auto transaction{ session.createReadTransaction() };
-            EXPECT_EQ(Artist::find(session, Artist::FindParameters{}.setReleaseArtistsOnly(true)).results.size(), 0);
+            EXPECT_EQ(Artist::find(session, Artist::FindParameters{}.setReleaseArtistsOnly(true)).size(), 0);
         }
 
         {
@@ -707,7 +692,7 @@ namespace lms::db::tests
 
         {
             auto transaction{ session.createReadTransaction() };
-            EXPECT_EQ(Artist::find(session, Artist::FindParameters{}.setReleaseArtistsOnly(true)).results.size(), 1);
+            EXPECT_EQ(Artist::find(session, Artist::FindParameters{}.setReleaseArtistsOnly(true)).size(), 1);
         }
     }
 
@@ -734,8 +719,8 @@ namespace lms::db::tests
             params.setFilters(Filters{}.setCodec(core::media::Codec::FLAC));
 
             const auto artists{ Artist::find(session, params) };
-            ASSERT_EQ(artists.results.size(), 1);
-            EXPECT_EQ(artists.results.front()->getId(), artist2.getId());
+            ASSERT_EQ(artists.size(), 1);
+            EXPECT_EQ(artists.front()->getId(), artist2.getId());
         }
     }
 
@@ -753,15 +738,15 @@ namespace lms::db::tests
         {
             auto transaction{ session.createReadTransaction() };
 
-            EXPECT_EQ(Artist::findIds(session, Artist::FindParameters{}.setKeywords({ "N" })).results.size(), 0);
+            EXPECT_EQ(Artist::findIds(session, Artist::FindParameters{}.setKeywords({ "N" })).size(), 0);
 
             const auto artistsByAAA{ Artist::findIds(session, Artist::FindParameters{}.setKeywords({ "A" })) };
-            ASSERT_EQ(artistsByAAA.results.size(), 1);
-            EXPECT_EQ(artistsByAAA.results.front(), artist.getId());
+            ASSERT_EQ(artistsByAAA.size(), 1);
+            EXPECT_EQ(artistsByAAA.front(), artist.getId());
 
             const auto artistsByZZZ{ Artist::Artist::findIds(session, Artist::FindParameters{}.setKeywords({ "Z" })) };
-            ASSERT_EQ(artistsByZZZ.results.size(), 1);
-            EXPECT_EQ(artistsByZZZ.results.front(), artist.getId());
+            ASSERT_EQ(artistsByZZZ.size(), 1);
+            EXPECT_EQ(artistsByZZZ.front(), artist.getId());
 
             EXPECT_EQ(Artist::find(session, "NNN").size(), 0);
             EXPECT_EQ(Artist::find(session, "AAA").size(), 1);
@@ -804,27 +789,27 @@ namespace lms::db::tests
             auto transaction{ session.createReadTransaction() };
             {
                 const auto artists{ Artist::findIds(session, Artist::FindParameters{}.setKeywords({ "MyArtist" })) };
-                EXPECT_EQ(artists.results.size(), 6);
+                EXPECT_EQ(artists.size(), 6);
             }
 
             {
                 const auto artists{ Artist::findIds(session, Artist::FindParameters{}.setKeywords({ "MyArtist%" }).setSortMethod(ArtistSortMethod::Name)) };
-                ASSERT_EQ(artists.results.size(), 2);
-                EXPECT_EQ(artists.results[0], artist1.getId());
-                EXPECT_EQ(artists.results[1], artist4.getId());
+                ASSERT_EQ(artists.size(), 2);
+                EXPECT_EQ(artists[0], artist1.getId());
+                EXPECT_EQ(artists[1], artist4.getId());
             }
 
             {
                 const auto artists{ Artist::findIds(session, Artist::FindParameters{}.setKeywords({ "%MyArtist" }).setSortMethod(ArtistSortMethod::Name)) };
-                ASSERT_EQ(artists.results.size(), 2);
-                EXPECT_EQ(artists.results[0], artist2.getId());
-                EXPECT_EQ(artists.results[1], artist5.getId());
+                ASSERT_EQ(artists.size(), 2);
+                EXPECT_EQ(artists[0], artist2.getId());
+                EXPECT_EQ(artists[1], artist5.getId());
             }
 
             {
                 const auto artists{ Artist::findIds(session, Artist::FindParameters{}.setKeywords({ "_MyArtist" }).setSortMethod(ArtistSortMethod::Name)) };
-                ASSERT_EQ(artists.results.size(), 1);
-                EXPECT_EQ(artists.results[0], artist3.getId());
+                ASSERT_EQ(artists.size(), 1);
+                EXPECT_EQ(artists[0], artist3.getId());
             }
         }
     }
@@ -934,13 +919,37 @@ namespace lms::db::tests
             auto allArtistsByName{ Artist::findIds(session, Artist::FindParameters{}.setSortMethod(ArtistSortMethod::Name)) };
             auto allArtistsBySortName{ Artist::findIds(session, Artist::FindParameters{}.setSortMethod(ArtistSortMethod::SortName)) };
 
-            ASSERT_EQ(allArtistsByName.results.size(), 2);
-            EXPECT_EQ(allArtistsByName.results.front(), artistA.getId());
-            EXPECT_EQ(allArtistsByName.results.back(), artistB.getId());
+            ASSERT_EQ(allArtistsByName.size(), 2);
+            EXPECT_EQ(allArtistsByName.front(), artistA.getId());
+            EXPECT_EQ(allArtistsByName.back(), artistB.getId());
 
-            ASSERT_EQ(allArtistsBySortName.results.size(), 2);
-            EXPECT_EQ(allArtistsBySortName.results.front(), artistB.getId());
-            EXPECT_EQ(allArtistsBySortName.results.back(), artistA.getId());
+            ASSERT_EQ(allArtistsBySortName.size(), 2);
+            EXPECT_EQ(allArtistsBySortName.front(), artistB.getId());
+            EXPECT_EQ(allArtistsBySortName.back(), artistA.getId());
+        }
+    }
+
+    TEST_F(DatabaseFixture, Artist_sortMethod_emptySortNameFallsBackOnName)
+    {
+        ScopedArtist artistBravo{ session, "Bravo" };     // no sort name -> falls back on "Bravo"
+        ScopedArtist artistAlpha{ session, "Alpha" };     // explicit sort name -> "Zulu"
+        ScopedArtist artistCharlie{ session, "Charlie" }; // no sort name -> falls back on "Charlie"
+
+        {
+            auto transaction{ session.createWriteTransaction() };
+
+            artistAlpha.get().modify()->setSortName("Zulu");
+        }
+
+        {
+            auto transaction{ session.createReadTransaction() };
+
+            const auto allArtistsBySortName{ Artist::findIds(session, Artist::FindParameters{}.setSortMethod(ArtistSortMethod::SortName)) };
+
+            ASSERT_EQ(allArtistsBySortName.size(), 3);
+            EXPECT_EQ(allArtistsBySortName[0], artistBravo.getId());
+            EXPECT_EQ(allArtistsBySortName[1], artistCharlie.getId());
+            EXPECT_EQ(allArtistsBySortName[2], artistAlpha.getId());
         }
     }
 
@@ -955,7 +964,7 @@ namespace lms::db::tests
             auto transaction{ session.createReadTransaction() };
 
             auto tracks{ Track::findIds(session, Track::FindParameters{}.setNonRelease(true).setArtist(artist->getId())) };
-            EXPECT_EQ(tracks.results.size(), 0);
+            EXPECT_EQ(tracks.size(), 0);
         }
 
         {
@@ -971,8 +980,8 @@ namespace lms::db::tests
             auto transaction{ session.createReadTransaction() };
 
             const auto tracks{ Track::findIds(session, Track::FindParameters{}.setArtist(artist.getId()).setNonRelease(true)) };
-            ASSERT_EQ(tracks.results.size(), 1);
-            EXPECT_EQ(tracks.results.front(), track2.getId());
+            ASSERT_EQ(tracks.size(), 1);
+            EXPECT_EQ(tracks.front(), track2.getId());
         }
     }
 
@@ -1033,11 +1042,42 @@ namespace lms::db::tests
         {
             auto transaction{ session.createReadTransaction() };
             const auto artists{ Artist::findIds(session, Artist::FindParameters{}.setSortMethod(ArtistSortMethod::AddedDesc)) };
-            ASSERT_EQ(artists.results.size(), 4);
-            EXPECT_EQ(artists.results[0], artistD.getId());
-            EXPECT_EQ(artists.results[1], artistA.getId());
-            EXPECT_EQ(artists.results[2], artistB.getId());
-            EXPECT_EQ(artists.results[3], artistC.getId());
+            ASSERT_EQ(artists.size(), 4);
+            EXPECT_EQ(artists[0], artistD.getId());
+            EXPECT_EQ(artists[1], artistA.getId());
+            EXPECT_EQ(artists[2], artistB.getId());
+            EXPECT_EQ(artists[3], artistC.getId());
+        }
+    }
+
+    TEST_F(DatabaseFixture, Artist_sortDateAdded_tieBreakOnEffectiveSortName)
+    {
+        ScopedArtist artistZulu{ session, "Zulu" };   // no sort name -> falls back on "Zulu"
+        ScopedArtist artistAlpha{ session, "Alpha" }; // explicit sort name -> "Aardvark"
+
+        ScopedTrack trackZulu{ session };
+        ScopedTrack trackAlpha{ session };
+
+        {
+            auto transaction{ session.createWriteTransaction() };
+
+            artistAlpha.get().modify()->setSortName("Aardvark");
+
+            const Wt::WDateTime addedTime{ Wt::WDate{ 2021, 1, 2 } };
+            trackZulu.get().modify()->setAddedTime(addedTime);
+            trackAlpha.get().modify()->setAddedTime(addedTime);
+
+            session.create<TrackArtistLink>(trackZulu.get(), artistZulu.get(), TrackArtistLinkType::Artist);
+            session.create<TrackArtistLink>(trackAlpha.get(), artistAlpha.get(), TrackArtistLinkType::Artist);
+        }
+
+        {
+            auto transaction{ session.createReadTransaction() };
+
+            const auto artists{ Artist::findIds(session, Artist::FindParameters{}.setSortMethod(ArtistSortMethod::AddedDesc)) };
+            ASSERT_EQ(artists.size(), 2);
+            EXPECT_EQ(artists[0], artistAlpha.getId());
+            EXPECT_EQ(artists[1], artistZulu.getId());
         }
     }
 
@@ -1073,11 +1113,42 @@ namespace lms::db::tests
         {
             auto transaction{ session.createReadTransaction() };
             const auto artists{ Artist::findIds(session, Artist::FindParameters{}.setSortMethod(ArtistSortMethod::LastWrittenDesc)) };
-            ASSERT_EQ(artists.results.size(), 4);
-            EXPECT_EQ(artists.results[0], artistA.getId());
-            EXPECT_EQ(artists.results[1], artistD.getId());
-            EXPECT_EQ(artists.results[2], artistB.getId());
-            EXPECT_EQ(artists.results[3], artistC.getId());
+            ASSERT_EQ(artists.size(), 4);
+            EXPECT_EQ(artists[0], artistA.getId());
+            EXPECT_EQ(artists[1], artistD.getId());
+            EXPECT_EQ(artists[2], artistB.getId());
+            EXPECT_EQ(artists[3], artistC.getId());
+        }
+    }
+
+    TEST_F(DatabaseFixture, Artist_sortLastWritten_tieBreakOnEffectiveSortName)
+    {
+        ScopedArtist artistZulu{ session, "Zulu" };   // no sort name -> falls back on "Zulu"
+        ScopedArtist artistAlpha{ session, "Alpha" }; // explicit sort name -> "Aardvark"
+
+        ScopedTrack trackZulu{ session };
+        ScopedTrack trackAlpha{ session };
+
+        {
+            auto transaction{ session.createWriteTransaction() };
+
+            artistAlpha.get().modify()->setSortName("Aardvark");
+
+            const Wt::WDateTime lastWriteTime{ Wt::WDate{ 2021, 1, 2 } };
+            trackZulu.get().modify()->setLastWriteTime(lastWriteTime);
+            trackAlpha.get().modify()->setLastWriteTime(lastWriteTime);
+
+            session.create<TrackArtistLink>(trackZulu.get(), artistZulu.get(), TrackArtistLinkType::Artist);
+            session.create<TrackArtistLink>(trackAlpha.get(), artistAlpha.get(), TrackArtistLinkType::Artist);
+        }
+
+        {
+            auto transaction{ session.createReadTransaction() };
+
+            const auto artists{ Artist::findIds(session, Artist::FindParameters{}.setSortMethod(ArtistSortMethod::LastWrittenDesc)) };
+            ASSERT_EQ(artists.size(), 2);
+            EXPECT_EQ(artists[0], artistAlpha.getId());
+            EXPECT_EQ(artists[1], artistZulu.getId());
         }
     }
 
@@ -1111,7 +1182,7 @@ namespace lms::db::tests
         }
     }
 
-    TEST_F(DatabaseFixture, Artist_findWithMBIDNameVariants)
+    TEST_F(DatabaseFixture, Artist_findWithMBIDMatchedNameOrSortNameVariants_name)
     {
         ScopedArtist artistA{ session, "ArtistA" };
         ScopedArtist artistB{ session, "ArtistB" };
@@ -1142,11 +1213,201 @@ namespace lms::db::tests
             auto transaction{ session.createReadTransaction() };
 
             ArtistId lastRetrievedArtist;
-            const auto results{ Artist::findWithMBIDNameVariants(session, lastRetrievedArtist) };
+            const auto results{ Artist::findWithMBIDMatchedNameOrSortNameVariants(session, lastRetrievedArtist) };
 
-            ASSERT_EQ(results.results.size(), 1);
-            EXPECT_EQ(results.results[0]->getId(), artistA.getId());
+            ASSERT_EQ(results.size(), 1);
+            EXPECT_EQ(results[0]->getId(), artistA.getId());
             EXPECT_EQ(lastRetrievedArtist, artistA.getId());
+        }
+    }
+
+    TEST_F(DatabaseFixture, Artist_findWithMBIDMatchedNameOrSortNameVariants_sortName)
+    {
+        ScopedArtist artistA{ session, "ArtistA" };
+        ScopedArtist artistB{ session, "ArtistB" };
+
+        ScopedTrack trackA1{ session };
+        ScopedTrack trackA2{ session };
+        ScopedTrack trackB1{ session };
+
+        {
+            auto transaction{ session.createWriteTransaction() };
+
+            {
+                auto link{ session.create<TrackArtistLink>(trackA1.get(), artistA.get(), TrackArtistLinkType::Artist, true) };
+                link.modify()->setArtistName("ArtistA");
+                link.modify()->setArtistSortName("ArtistA");
+            }
+            {
+                auto link{ session.create<TrackArtistLink>(trackA2.get(), artistA.get(), TrackArtistLinkType::Artist, true) };
+                link.modify()->setArtistName("ArtistA");
+                link.modify()->setArtistSortName("AlternateSortArtistA");
+            }
+
+            {
+                auto link{ session.create<TrackArtistLink>(trackB1.get(), artistB.get(), TrackArtistLinkType::Artist, true) };
+                link.modify()->setArtistName("ArtistB");
+                link.modify()->setArtistSortName("ArtistB");
+            }
+        }
+
+        {
+            auto transaction{ session.createReadTransaction() };
+
+            ArtistId lastRetrievedArtist;
+            const auto results{ Artist::findWithMBIDMatchedNameOrSortNameVariants(session, lastRetrievedArtist) };
+
+            ASSERT_EQ(results.size(), 1);
+            EXPECT_EQ(results[0]->getId(), artistA.getId());
+            EXPECT_EQ(lastRetrievedArtist, artistA.getId());
+        }
+    }
+
+    TEST_F(DatabaseFixture, Artist_findWithMBIDMatchedNameOrSortNameVariants_emptySortNameIgnored)
+    {
+        ScopedArtist artist{ session, "ArtistA" };
+        ScopedTrack track1{ session };
+        ScopedTrack track2{ session };
+
+        {
+            auto transaction{ session.createWriteTransaction() };
+
+            {
+                auto link{ session.create<TrackArtistLink>(track1.get(), artist.get(), TrackArtistLinkType::Artist, true) };
+                link.modify()->setArtistName("ArtistA");
+                link.modify()->setArtistSortName("ArtistA, Sort");
+            }
+            {
+                // no sort name tag on this track: must not count as a variant against the one above
+                auto link{ session.create<TrackArtistLink>(track2.get(), artist.get(), TrackArtistLinkType::Artist, true) };
+                link.modify()->setArtistName("ArtistA");
+            }
+        }
+
+        {
+            auto transaction{ session.createReadTransaction() };
+
+            ArtistId lastRetrievedArtist;
+            const auto results{ Artist::findWithMBIDMatchedNameOrSortNameVariants(session, lastRetrievedArtist) };
+
+            ASSERT_EQ(results.size(), 0);
+        }
+    }
+
+    TEST_F(DatabaseFixture, Artist_findWithMBIDMatchedNameOrSortNameVariants_releaseOnly)
+    {
+        ScopedArtist artist{ session, "ArtistA" };
+        ScopedRelease release1{ session, "Release1" };
+        ScopedRelease release2{ session, "Release2" };
+
+        {
+            auto transaction{ session.createWriteTransaction() };
+
+            {
+                auto link{ session.create<ReleaseArtistLink>(release1.get(), artist.get(), true) };
+                link.modify()->setArtistName("ArtistA");
+            }
+            {
+                auto link{ session.create<ReleaseArtistLink>(release2.get(), artist.get(), true) };
+                link.modify()->setArtistName("AlternateArtistA");
+            }
+        }
+
+        {
+            auto transaction{ session.createReadTransaction() };
+
+            ArtistId lastRetrievedArtist;
+            const auto results{ Artist::findWithMBIDMatchedNameOrSortNameVariants(session, lastRetrievedArtist) };
+
+            ASSERT_EQ(results.size(), 1);
+            EXPECT_EQ(results[0]->getId(), artist.getId());
+        }
+    }
+
+    TEST_F(DatabaseFixture, Artist_findWithNonMBIDSortNameVariants)
+    {
+        ScopedArtist artistA{ session, "ArtistA" };
+        ScopedArtist artistB{ session, "ArtistB" };
+        ScopedArtist artistC{ session, "ArtistC", core::UUID::fromString("38811c52-85e3-4e2e-3319-ab7d9f2cfa5b") };
+
+        ScopedTrack trackA1{ session };
+        ScopedTrack trackA2{ session };
+        ScopedTrack trackB1{ session };
+        ScopedTrack trackC1{ session };
+        ScopedTrack trackC2{ session };
+
+        {
+            auto transaction{ session.createWriteTransaction() };
+
+            {
+                auto link{ session.create<TrackArtistLink>(trackA1.get(), artistA.get(), TrackArtistLinkType::Artist, false) };
+                link.modify()->setArtistName("ArtistA");
+                link.modify()->setArtistSortName("ArtistA, Sort1");
+            }
+            {
+                auto link{ session.create<TrackArtistLink>(trackA2.get(), artistA.get(), TrackArtistLinkType::Artist, false) };
+                link.modify()->setArtistName("ArtistA");
+                link.modify()->setArtistSortName("ArtistA, Sort2");
+            }
+            {
+                auto link{ session.create<TrackArtistLink>(trackB1.get(), artistB.get(), TrackArtistLinkType::Artist, false) };
+                link.modify()->setArtistName("ArtistB");
+                link.modify()->setArtistSortName("ArtistB, Sort");
+            }
+            // artistC has an MBID: even with conflicting sort names, it must not be selected by this non-MBID query
+            {
+                auto link{ session.create<TrackArtistLink>(trackC1.get(), artistC.get(), TrackArtistLinkType::Artist, true) };
+                link.modify()->setArtistName("ArtistC");
+                link.modify()->setArtistSortName("ArtistC, Sort1");
+            }
+            {
+                auto link{ session.create<TrackArtistLink>(trackC2.get(), artistC.get(), TrackArtistLinkType::Artist, true) };
+                link.modify()->setArtistName("ArtistC");
+                link.modify()->setArtistSortName("ArtistC, Sort2");
+            }
+        }
+
+        {
+            auto transaction{ session.createReadTransaction() };
+
+            ArtistId lastRetrievedArtist;
+            const auto results{ Artist::findWithNonMBIDSortNameVariants(session, lastRetrievedArtist) };
+
+            ASSERT_EQ(results.size(), 1);
+            EXPECT_EQ(results[0]->getId(), artistA.getId());
+            EXPECT_EQ(lastRetrievedArtist, artistA.getId());
+        }
+    }
+
+    TEST_F(DatabaseFixture, Artist_findWithNonMBIDSortNameVariants_releaseOnly)
+    {
+        ScopedArtist artist{ session, "ArtistA" };
+        ScopedRelease release1{ session, "Release1" };
+        ScopedRelease release2{ session, "Release2" };
+
+        {
+            auto transaction{ session.createWriteTransaction() };
+
+            {
+                auto link{ session.create<ReleaseArtistLink>(release1.get(), artist.get(), false) };
+                link.modify()->setArtistName("ArtistA");
+                link.modify()->setArtistSortName("ArtistA, Sort1");
+            }
+            {
+                auto link{ session.create<ReleaseArtistLink>(release2.get(), artist.get(), false) };
+                link.modify()->setArtistName("ArtistA");
+                link.modify()->setArtistSortName("ArtistA, Sort2");
+            }
+        }
+
+        {
+            auto transaction{ session.createReadTransaction() };
+
+            ArtistId lastRetrievedArtist;
+            const auto results{ Artist::findWithNonMBIDSortNameVariants(session, lastRetrievedArtist) };
+
+            ASSERT_EQ(results.size(), 1);
+            EXPECT_EQ(results[0]->getId(), artist.getId());
         }
     }
 } // namespace lms::db::tests

@@ -1,6 +1,7 @@
 
 add_executable(test-database
 	Artist.cpp
+	ArtistFeedback.cpp
 	ArtistInfo.cpp
 	Artwork.cpp
 	AuthToken.cpp
@@ -13,9 +14,11 @@ add_executable(test-database
 	Image.cpp
 	Language.cpp
 	Listen.cpp
+	ListenBackendSync.cpp
 	Medium.cpp
 	Migration.cpp
 	Mood.cpp
+	Movement.cpp
 	PlayListFile.cpp
 	Podcast.cpp
 	RatedArtist.cpp
@@ -23,17 +26,17 @@ add_executable(test-database
 	RatedTrack.cpp
 	Release.cpp
 	ReleaseArtistLink.cpp
+	ReleaseFeedback.cpp
 	ScanSettings.cpp
-	StarredArtist.cpp
-	StarredRelease.cpp
-	StarredTrack.cpp
 	Track.cpp
 	TrackArtistLink.cpp
 	TrackBookmark.cpp
 	TrackEmbeddedImage.cpp
+	TrackFeedback.cpp
 	TrackList.cpp
 	TrackLyrics.cpp
 	User.cpp
+	Work.cpp
 	)
 
 target_link_libraries(test-database PRIVATE

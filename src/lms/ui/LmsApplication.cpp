@@ -32,6 +32,7 @@
 #include "core/ILogger.hpp"
 #include "core/ITraceLogger.hpp"
 #include "core/Service.hpp"
+#include "core/String.hpp"
 
 #include "database/IDb.hpp"
 #include "database/Session.hpp"
@@ -101,8 +102,9 @@ namespace lms::ui
             res->use(appRoot + "release");
             res->use(appRoot + "releases");
             res->use(appRoot + "settings-audio");
+            res->use(appRoot + "settings-lastfm");
+            res->use(appRoot + "settings-listenbrainz");
             res->use(appRoot + "settings-password");
-            res->use(appRoot + "settings-services");
             res->use(appRoot + "settings-subsonic");
             res->use(appRoot + "settings-ui");
             res->use(appRoot + "tracklist");
@@ -145,9 +147,9 @@ namespace lms::ui
 
     } // namespace
 
-    std::unique_ptr<Wt::WApplication> LmsApplication::create(const Wt::WEnvironment& env, db::IDb& db, LmsApplicationManager& appManager, AuthenticationBackend authBackend)
+    std::unique_ptr<Wt::WApplication> LmsApplication::create(const Wt::WEnvironment& env, db::IDb& db, LmsApplicationManager& appManager, AuthenticationBackend authBackend, const core::UUID& serverInstanceId)
     {
-        return std::make_unique<LmsApplication>(env, db, appManager, authBackend);
+        return std::make_unique<LmsApplication>(env, db, appManager, authBackend, serverInstanceId);
     }
 
     LmsApplication* LmsApplication::instance()
@@ -155,11 +157,12 @@ namespace lms::ui
         return static_cast<LmsApplication*>(Wt::WApplication::instance());
     }
 
-    LmsApplication::LmsApplication(const Wt::WEnvironment& env, db::IDb& db, LmsApplicationManager& appManager, AuthenticationBackend authBackend)
+    LmsApplication::LmsApplication(const Wt::WEnvironment& env, db::IDb& db, LmsApplicationManager& appManager, AuthenticationBackend authBackend, const core::UUID& serverInstanceId)
         : Wt::WApplication{ env }
         , _db{ db }
         , _appManager{ appManager }
         , _authBackend{ authBackend }
+        , _serverInstanceId{ serverInstanceId }
         , _areDownloadsEnabled(core::Service<core::IConfig>::get()->getBool("ui-allow-downloads", true))
     {
         try
@@ -420,9 +423,16 @@ namespace lms::ui
         if (core::Service<core::IConfig>::get()->getBool("api-subsonic", true))
         {
             navbar->setCondition("if-has-subsonic-api-menu", true);
-            navbar->bindNew<Wt::WAnchor>("settings-subsonic", Wt::WLink{ Wt::LinkType::InternalPath, "/settings/subsonic" }, Wt::WString::tr("Lms.Settings.menu-subsonic"));
+            auto* subsonicAnchor{ navbar->bindNew<Wt::WAnchor>("settings-subsonic", Wt::WLink{ Wt::LinkType::InternalPath, "/settings/subsonic" }) };
+            subsonicAnchor->setTextFormat(Wt::TextFormat::UnsafeXHTML);
+            subsonicAnchor->setText(Wt::WString::tr("Lms.Settings.icon.subsonic") + Wt::WString::tr("Lms.Settings.subsonic-api"));
         }
-        navbar->bindNew<Wt::WAnchor>("settings-services", Wt::WLink{ Wt::LinkType::InternalPath, "/settings/services" }, Wt::WString::tr("Lms.Settings.menu-services"));
+        {
+            auto* lbAnchor{ navbar->bindNew<Wt::WAnchor>("settings-listenbrainz", Wt::WLink{ Wt::LinkType::InternalPath, "/settings/listenbrainz" }) };
+            lbAnchor->setTextFormat(Wt::TextFormat::UnsafeXHTML);
+            lbAnchor->setText(Wt::WString::tr("Lms.Settings.icon.listenbrainz") + Wt::WString::tr("Lms.Settings.menu-listenbrainz"));
+        }
+        navbar->bindNew<Wt::WAnchor>("settings-lastfm", Wt::WLink{ Wt::LinkType::InternalPath, "/settings/lastfm" }, Wt::WString::tr("Lms.Settings.menu-lastfm"));
 
         if (getAuthBackend() == AuthenticationBackend::Internal)
         {
@@ -525,7 +535,7 @@ namespace lms::ui
 
         internalPathChanged().connect([this] {
             LMS_LOG(UI, DEBUG, "Internal path changed to '" << wApp->internalPath() << "'");
-            doJavaScript(javaScriptClass() + ".updateActiveNav('" + wApp->internalPath() + "')");
+            doJavaScript(javaScriptClass() + ".updateActiveNav('" + core::stringUtils::jsEscape(wApp->internalPath()) + "')");
         });
 
         mainRouter->noMatch().connect([] {
@@ -533,7 +543,7 @@ namespace lms::ui
         });
 
         mainRouter->activate();
-        doJavaScript(javaScriptClass() + ".updateActiveNav('" + wApp->internalPath() + "')");
+        doJavaScript(javaScriptClass() + ".updateActiveNav('" + core::stringUtils::jsEscape(wApp->internalPath()) + "')");
     }
 
     void LmsApplication::notify(const Wt::WEvent& event)

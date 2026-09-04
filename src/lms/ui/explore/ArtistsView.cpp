@@ -74,6 +74,8 @@ namespace lms::ui
         }
 
         _container = bindNew<InfiniteScrollingContainer>("artists", Wt::WString::tr("Lms.Explore.Artists.template.container"));
+        _container->setNoResultsMessage(Wt::WString::tr("Lms.Explore.no-results"));
+        _container->setLimitReachedMessage(Wt::WString::tr("Lms.Explore.limit-reached"));
         _container->onRequestElements.connect([this] {
             addSome();
         });
@@ -111,19 +113,14 @@ namespace lms::ui
 
     void Artists::addSome()
     {
-        const auto artistIds{ _artistCollector.get(db::Range{ static_cast<std::size_t>(_container->getCount()), _batchSize }) };
-
+        bool moreResults{};
         {
             auto transaction{ LmsApp->getDbSession().createReadTransaction() };
-
-            for (const db::ArtistId artistId : artistIds.results)
-            {
-                if (const auto artist{ db::Artist::find(LmsApp->getDbSession(), artistId) })
-                    _container->add(ArtistListHelpers::createEntry(artist));
-            }
+            _artistCollector.get(db::Range{ static_cast<std::size_t>(_container->getCount()), _batchSize }, moreResults, [&](const db::Artist::pointer& artist) {
+                _container->add(ArtistListHelpers::createEntry(artist));
+            });
         }
-
-        _container->setHasMore(artistIds.moreResults);
+        _container->setHasMore(moreResults);
     }
 
 } // namespace lms::ui

@@ -177,7 +177,7 @@ namespace lms::ui
                 });
             });
 
-            auto clusterTypes{ db::ClusterType::findIds(LmsApp->getDbSession()).results };
+            auto clusterTypes{ db::ClusterType::findIds(LmsApp->getDbSession()) };
             auto clusterGroups{ artist->getClusterGroups(clusterTypes, 3) };
 
             for (const auto& clusters : clusterGroups)
@@ -198,23 +198,27 @@ namespace lms::ui
         bindNew<Wt::WPushButton>("play-btn", Wt::WString::tr("Lms.Explore.play"), Wt::TextFormat::XHTML)
             ->clicked()
             .connect([this] {
-                _playQueueController.processCommand(PlayQueueController::Command::Play, { _artistId });
+                db::ArtistId artists[]{ _artistId };
+                _playQueueController.processCommand(PlayQueueController::Command::Play, artists);
             });
 
         bindNew<Wt::WPushButton>("play-shuffled", Wt::WString::tr("Lms.Explore.play-shuffled"), Wt::TextFormat::Plain)
             ->clicked()
             .connect([this] {
-                _playQueueController.processCommand(PlayQueueController::Command::PlayShuffled, { _artistId });
+                db::ArtistId artists[]{ _artistId };
+                _playQueueController.processCommand(PlayQueueController::Command::PlayShuffled, artists);
             });
         bindNew<Wt::WPushButton>("play-next", Wt::WString::tr("Lms.Explore.play-next"), Wt::TextFormat::Plain)
             ->clicked()
             .connect([this] {
-                _playQueueController.processCommand(PlayQueueController::Command::PlayNext, { _artistId });
+                db::ArtistId artists[]{ _artistId };
+                _playQueueController.processCommand(PlayQueueController::Command::PlayNext, artists);
             });
         bindNew<Wt::WPushButton>("play-last", Wt::WString::tr("Lms.Explore.play-last"), Wt::TextFormat::Plain)
             ->clicked()
             .connect([this] {
-                _playQueueController.processCommand(PlayQueueController::Command::PlayOrAddLast, { _artistId });
+                db::ArtistId artists[]{ _artistId };
+                _playQueueController.processCommand(PlayQueueController::Command::PlayOrAddLast, artists);
             });
 
         if (LmsApp->areDownloadsEnabled())
@@ -225,19 +229,19 @@ namespace lms::ui
         }
 
         {
-            auto isStarred{ [this] { return core::Service<feedback::IFeedbackService>::get()->isStarred(LmsApp->getUserId(), _artistId); } };
+            auto hasFeedback{ [this] { return core::Service<feedback::IFeedbackService>::get()->getFeedback(LmsApp->getUserId(), _artistId) == db::FeedbackValue::Loved; } };
 
-            Wt::WPushButton* starBtn{ bindNew<Wt::WPushButton>("star", Wt::WString::tr(isStarred() ? "Lms.Explore.unstar" : "Lms.Explore.star")) };
-            starBtn->clicked().connect([=, this] {
-                if (isStarred())
+            Wt::WPushButton* feedbackBtn{ bindNew<Wt::WPushButton>("star", Wt::WString::tr(hasFeedback() ? "Lms.Explore.unstar" : "Lms.Explore.star")) };
+            feedbackBtn->clicked().connect([=, this] {
+                if (hasFeedback())
                 {
-                    core::Service<feedback::IFeedbackService>::get()->unstar(LmsApp->getUserId(), _artistId);
-                    starBtn->setText(Wt::WString::tr("Lms.Explore.star"));
+                    core::Service<feedback::IFeedbackService>::get()->setFeedback(LmsApp->getUserId(), _artistId, db::FeedbackValue::None);
+                    feedbackBtn->setText(Wt::WString::tr("Lms.Explore.star"));
                 }
                 else
                 {
-                    core::Service<feedback::IFeedbackService>::get()->star(LmsApp->getUserId(), _artistId);
-                    starBtn->setText(Wt::WString::tr("Lms.Explore.unstar"));
+                    core::Service<feedback::IFeedbackService>::get()->setFeedback(LmsApp->getUserId(), _artistId, db::FeedbackValue::Loved);
+                    feedbackBtn->setText(Wt::WString::tr("Lms.Explore.unstar"));
                 }
             });
         }
@@ -445,7 +449,7 @@ namespace lms::ui
         }
 
         auto transaction{ LmsApp->getDbSession().createReadTransaction() };
-        _trackIds = db::Track::findIds(LmsApp->getDbSession(), params).results;
+        _trackIds = db::Track::findIds(LmsApp->getDbSession(), params);
     }
 
     void Artist::refreshRelatedArtists(const std::vector<db::ArtistId>& similarArtistsId)
@@ -505,7 +509,9 @@ namespace lms::ui
             if (const db::Track::pointer track{ db::Track::find(LmsApp->getDbSession(), _trackIds[index]) })
             {
                 _trackContainer->add(TrackListHelpers::createEntry(track, _playQueueController, _filters, [this](db::TrackId trackId) {
-                    _playQueueController.playTrackInList(trackId, _trackIds);
+                    const auto it{ std::find(std::cbegin(_trackIds), std::cend(_trackIds), trackId) };
+                    if (it != std::cend(_trackIds))
+                        _playQueueController.playAtIndex(_trackIds, static_cast<std::size_t>(std::distance(std::cbegin(_trackIds), it)));
                 }));
 
                 areTracksAdded = true;

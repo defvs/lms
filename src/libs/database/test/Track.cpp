@@ -40,8 +40,8 @@ namespace lms::db::tests
     {
         {
             auto transaction{ session.createReadTransaction() };
-            EXPECT_EQ(Track::find(session, Track::FindParameters{}).results.size(), 0);
-            EXPECT_EQ(Track::findIds(session, Track::FindParameters{}).results.size(), 0);
+            EXPECT_EQ(Track::find(session, Track::FindParameters{}).size(), 0);
+            EXPECT_EQ(Track::findIds(session, Track::FindParameters{}).size(), 0);
             EXPECT_EQ(Track::getCount(session), 0);
             EXPECT_FALSE(Track::exists(session, 0));
 
@@ -57,7 +57,7 @@ namespace lms::db::tests
         {
             auto transaction{ session.createReadTransaction() };
 
-            EXPECT_EQ(Track::find(session, Track::FindParameters{}).results.size(), 1);
+            EXPECT_EQ(Track::find(session, Track::FindParameters{}).size(), 1);
             EXPECT_EQ(Track::getCount(session), 1);
             EXPECT_TRUE(Track::exists(session, track.getId()));
             auto myTrack{ Track::find(session, track.getId()) };
@@ -263,8 +263,8 @@ namespace lms::db::tests
             params.setFilters(Filters{}.setCodec(core::media::Codec::FLAC));
 
             const auto tracks{ Track::find(session, params) };
-            ASSERT_EQ(tracks.results.size(), 1);
-            EXPECT_EQ(tracks.results[0]->getId(), track2.getId());
+            ASSERT_EQ(tracks.size(), 1);
+            EXPECT_EQ(tracks[0]->getId(), track2.getId());
         }
     }
 
@@ -294,13 +294,13 @@ namespace lms::db::tests
         {
             auto transaction{ session.createReadTransaction() };
             const auto tracks{ Track::findIds(session, Track::FindParameters{}.setFilters(Filters{}.setMediaLibrary(library->getId()))) };
-            ASSERT_EQ(tracks.results.size(), 1);
-            EXPECT_EQ(tracks.results.front(), track.getId());
+            ASSERT_EQ(tracks.size(), 1);
+            EXPECT_EQ(tracks.front(), track.getId());
         }
         {
             auto transaction{ session.createReadTransaction() };
             const auto tracks{ Track::findIds(session, Track::FindParameters{}.setFilters(Filters{}.setMediaLibrary(otherLibrary->getId()))) };
-            EXPECT_EQ(tracks.results.size(), 0);
+            EXPECT_EQ(tracks.size(), 0);
         }
     }
 
@@ -323,7 +323,7 @@ namespace lms::db::tests
         EXPECT_FALSE(Track::exists(session, TrackId{ 42 }));
         EXPECT_EQ(Track::find(session, TrackId{ 42 }), Track::pointer{});
         EXPECT_FALSE(Track::find(session, TrackId{ 42 }));
-        EXPECT_EQ(Track::find(session, Track::FindParameters{}).results.size(), 0);
+        EXPECT_EQ(Track::find(session, Track::FindParameters{}).size(), 0);
         {
             auto track{ Track::find(session, TrackId{ 42 }) };
             EXPECT_TRUE(!track);
@@ -369,24 +369,24 @@ namespace lms::db::tests
 
             {
                 const auto tracks{ Track::findIds(session, Track::FindParameters{}.setKeywords({ "Track" })) };
-                EXPECT_EQ(tracks.results.size(), 6);
+                EXPECT_EQ(tracks.size(), 6);
             }
             {
                 const auto tracks{ Track::findIds(session, Track::FindParameters{}.setKeywords({ "MyTrack" })) };
-                EXPECT_EQ(tracks.results.size(), 5);
-                EXPECT_TRUE(std::none_of(std::cbegin(tracks.results), std::cend(tracks.results), [&](const TrackId trackId) { return trackId == track6.getId(); }));
+                EXPECT_EQ(tracks.size(), 5);
+                EXPECT_TRUE(std::none_of(std::cbegin(tracks), std::cend(tracks), [&](const TrackId trackId) { return trackId == track6.getId(); }));
             }
             {
                 const auto tracks{ Track::findIds(session, Track::FindParameters{}.setKeywords({ "MyTrack%" })) };
-                ASSERT_EQ(tracks.results.size(), 2);
-                EXPECT_EQ(tracks.results[0], track2.getId());
-                EXPECT_EQ(tracks.results[1], track3.getId());
+                ASSERT_EQ(tracks.size(), 2);
+                EXPECT_EQ(tracks[0], track2.getId());
+                EXPECT_EQ(tracks[1], track3.getId());
             }
             {
                 const auto tracks{ Track::findIds(session, Track::FindParameters{}.setKeywords({ "%MyTrack" })) };
-                ASSERT_EQ(tracks.results.size(), 2);
-                EXPECT_EQ(tracks.results[0], track4.getId());
-                EXPECT_EQ(tracks.results[1], track5.getId());
+                ASSERT_EQ(tracks.size(), 2);
+                EXPECT_EQ(tracks[0], track4.getId());
+                EXPECT_EQ(tracks[1], track5.getId());
             }
         }
     }
@@ -439,10 +439,10 @@ namespace lms::db::tests
             auto transaction{ session.createReadTransaction() };
             const auto tracks{ Track::findIds(session, Track::FindParameters{}.setSortMethod(TrackSortMethod::DateDesc)) };
 
-            ASSERT_EQ(tracks.results.size(), 3);
-            EXPECT_EQ(tracks.results[0], newerTrack.getId());
-            EXPECT_EQ(tracks.results[1], olderTrack.getId());
-            EXPECT_EQ(tracks.results[2], undatedTrack.getId());
+            ASSERT_EQ(tracks.size(), 3);
+            EXPECT_EQ(tracks[0], newerTrack.getId());
+            EXPECT_EQ(tracks[1], olderTrack.getId());
+            EXPECT_EQ(tracks[2], undatedTrack.getId());
         }
     }
 
@@ -463,16 +463,15 @@ namespace lms::db::tests
             fiveStarRating.get().modify()->setRating(5);
             popularFourStarRating.get().modify()->setRating(4);
             fourStarRating.get().modify()->setRating(4);
-            user.get().modify()->setScrobblingBackend(ScrobblingBackend::Internal);
         }
 
         const Wt::WDateTime listenTime{ Wt::WDate{ 2025, 1, 1 }, Wt::WTime{ 12, 0, 0 } };
-        ScopedListen popularFourStarListen1{ session, user.lockAndGet(), popularFourStarTrack.lockAndGet(), ScrobblingBackend::Internal, listenTime };
-        ScopedListen popularFourStarListen2{ session, user.lockAndGet(), popularFourStarTrack.lockAndGet(), ScrobblingBackend::Internal, listenTime };
-        ScopedListen fourStarListen{ session, user.lockAndGet(), fourStarTrack.lockAndGet(), ScrobblingBackend::Internal, listenTime };
-        ScopedListen unratedListen1{ session, user.lockAndGet(), unratedTrack.lockAndGet(), ScrobblingBackend::Internal, listenTime };
-        ScopedListen unratedListen2{ session, user.lockAndGet(), unratedTrack.lockAndGet(), ScrobblingBackend::Internal, listenTime };
-        ScopedListen unratedListen3{ session, user.lockAndGet(), unratedTrack.lockAndGet(), ScrobblingBackend::Internal, listenTime };
+        ScopedListen popularFourStarListen1{ session, user.lockAndGet(), popularFourStarTrack.lockAndGet(), listenTime };
+        ScopedListen popularFourStarListen2{ session, user.lockAndGet(), popularFourStarTrack.lockAndGet(), listenTime.addSecs(1) };
+        ScopedListen fourStarListen{ session, user.lockAndGet(), fourStarTrack.lockAndGet(), listenTime.addSecs(2) };
+        ScopedListen unratedListen1{ session, user.lockAndGet(), unratedTrack.lockAndGet(), listenTime.addSecs(3) };
+        ScopedListen unratedListen2{ session, user.lockAndGet(), unratedTrack.lockAndGet(), listenTime.addSecs(4) };
+        ScopedListen unratedListen3{ session, user.lockAndGet(), unratedTrack.lockAndGet(), listenTime.addSecs(5) };
 
         {
             auto transaction{ session.createReadTransaction() };
@@ -480,11 +479,11 @@ namespace lms::db::tests
                                                            .setSortMethod(TrackSortMethod::RatingDescAndPlayCountDesc)
                                                            .setSortUser(user.getId())) };
 
-            ASSERT_EQ(tracks.results.size(), 4);
-            EXPECT_EQ(tracks.results[0], fiveStarTrack.getId());
-            EXPECT_EQ(tracks.results[1], popularFourStarTrack.getId());
-            EXPECT_EQ(tracks.results[2], fourStarTrack.getId());
-            EXPECT_EQ(tracks.results[3], unratedTrack.getId());
+            ASSERT_EQ(tracks.size(), 4);
+            EXPECT_EQ(tracks[0], fiveStarTrack.getId());
+            EXPECT_EQ(tracks[1], popularFourStarTrack.getId());
+            EXPECT_EQ(tracks[2], fourStarTrack.getId());
+            EXPECT_EQ(tracks[3], unratedTrack.getId());
         }
     }
 
@@ -502,19 +501,19 @@ namespace lms::db::tests
         {
             auto transaction{ session.createReadTransaction() };
             const auto tracks{ Track::findIds(session, Track::FindParameters{}) };
-            EXPECT_EQ(tracks.results.size(), 1);
+            EXPECT_EQ(tracks.size(), 1);
         }
 
         {
             auto transaction{ session.createReadTransaction() };
             const auto tracks{ Track::findIds(session, Track::FindParameters{}.setWrittenAfter(dateTime.addSecs(-1))) };
-            EXPECT_EQ(tracks.results.size(), 1);
+            EXPECT_EQ(tracks.size(), 1);
         }
 
         {
             auto transaction{ session.createReadTransaction() };
             const auto tracks{ Track::findIds(session, Track::FindParameters{}.setWrittenAfter(dateTime.addSecs(+1))) };
-            EXPECT_EQ(tracks.results.size(), 0);
+            EXPECT_EQ(tracks.size(), 0);
         }
     }
 
@@ -593,11 +592,11 @@ namespace lms::db::tests
         {
             auto transaction{ session.createReadTransaction() };
             const auto tracks{ Track::findIds(session, Track::FindParameters{}.setSortMethod(TrackSortMethod::AddedDesc)) };
-            ASSERT_EQ(tracks.results.size(), 4);
-            EXPECT_EQ(tracks.results[0], track4.getId());
-            EXPECT_EQ(tracks.results[1], track1.getId());
-            EXPECT_EQ(tracks.results[2], track2.getId());
-            EXPECT_EQ(tracks.results[3], track3.getId());
+            ASSERT_EQ(tracks.size(), 4);
+            EXPECT_EQ(tracks[0], track4.getId());
+            EXPECT_EQ(tracks[1], track1.getId());
+            EXPECT_EQ(tracks[2], track2.getId());
+            EXPECT_EQ(tracks[3], track3.getId());
         }
     }
 
@@ -618,11 +617,11 @@ namespace lms::db::tests
         {
             auto transaction{ session.createReadTransaction() };
             const auto tracks{ Track::findIds(session, Track::FindParameters{}.setSortMethod(TrackSortMethod::LastWrittenDesc)) };
-            ASSERT_EQ(tracks.results.size(), 4);
-            EXPECT_EQ(tracks.results[0], track4.getId());
-            EXPECT_EQ(tracks.results[1], track1.getId());
-            EXPECT_EQ(tracks.results[2], track2.getId());
-            EXPECT_EQ(tracks.results[3], track3.getId());
+            ASSERT_EQ(tracks.size(), 4);
+            EXPECT_EQ(tracks[0], track4.getId());
+            EXPECT_EQ(tracks[1], track1.getId());
+            EXPECT_EQ(tracks[2], track2.getId());
+            EXPECT_EQ(tracks[3], track3.getId());
         }
     }
 
@@ -687,8 +686,8 @@ namespace lms::db::tests
             auto transaction{ session.createReadTransaction() };
 
             const auto results{ Track::findIds(session, Track::FindParameters{}.setFilters(Filters{}.setGenre(genre.getId()).setMood(mood.getId()).setGrouping(grouping.getId()).setLanguage(language.getId()))) };
-            ASSERT_EQ(results.results.size(), 1);
-            EXPECT_EQ(results.results.front(), track1.getId());
+            ASSERT_EQ(results.size(), 1);
+            EXPECT_EQ(results.front(), track1.getId());
         }
     }
 } // namespace lms::db::tests
